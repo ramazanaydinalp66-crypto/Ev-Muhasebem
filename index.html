@@ -25,6 +25,20 @@
             }
         }
     </script>
+<style>
+@media(max-width:640px){
+  body{font-size:14px}
+  header .max-w-7xl{height:auto;min-height:64px;padding-top:10px;padding-bottom:10px;gap:8px;align-items:flex-start;flex-wrap:wrap}
+  header .text-xl{font-size:1rem}
+  #currentUserDisplay{display:none}
+  #syncStatus{font-size:10px}
+  .tab-btn{padding:.65rem .8rem!important;font-size:12px!important}
+  .tab-content .p-6{padding:1rem}
+  table{font-size:12px}
+}
+button,input,select,textarea{transition:all .18s ease}
+input:focus,select:focus,textarea:focus{outline:none;box-shadow:0 0 0 3px rgba(99,102,241,.12);border-color:#818cf8}
+</style>
 </head>
 <body class="bg-gray-50 text-gray-800 font-sans antialiased">
 
@@ -314,10 +328,7 @@
                 <div id="txFormCard" class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
                     <div class="flex justify-between items-center mb-2">
                         <h3 id="txFormTitle" class="text-lg font-bold text-gray-800">Merkezi Fiş ve İşlem Girişi / Düzenleme</h3>
-                        <!-- Kameraya Okut Butonu -->
-                        <button type="button" onclick="simulateAICameraScan()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold px-3 py-2 rounded-lg shadow flex items-center gap-1.5 transition">
-                            <i class="fa-solid fa-camera"></i> Kameraya Okut (AI OCR)
-                        </button>
+
                     </div>
                     <form onsubmit="saveTransaction(event)" class="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <input type="hidden" id="editTxId">
@@ -348,10 +359,7 @@
                             <label class="block text-xs font-medium text-gray-600 mb-1">Açıklama</label>
                             <input type="text" id="tDesc" required class="w-full p-2.5 border rounded-lg text-sm" placeholder="Açıklama yazınız">
                         </div>
-                        <div class="md:col-span-2">
-                            <label class="block text-xs font-medium text-gray-600 mb-1">Fiş / Fatura Görseli (Dosyadan Yükle)</label>
-                            <input type="file" id="tReceipt" accept="image/*" class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700">
-                        </div>
+
                         <div class="md:col-span-3 flex justify-end gap-2">
                             <button type="button" onclick="resetTxForm()" id="txCancelBtn" class="hidden bg-gray-300 hover:bg-gray-400 text-gray-700 font-semibold px-4 py-2.5 rounded-lg text-sm">İptal</button>
                             <button type="submit" id="txSubmitBtn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-6 py-2.5 rounded-lg text-sm shadow">İşlemi Kaydet</button>
@@ -381,11 +389,30 @@
             </div>
 
             <!-- 5. BELGELER SEKMESİ -->
-            <div id="tab-documents" class="tab-content hidden space-y-6">
-                <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                    <h3 class="text-lg font-bold text-gray-800 mb-1">Arşivlenen Fiş ve Belgeler Arşivi</h3>
-                    <p class="text-sm text-gray-500 mb-6">Sisteme yüklenen veya yapay zeka kamerasıyla okutulan tüm belgeler burada sıralanır, silinebilir veya düzenlenebilir.</p>
-                    <div id="documentsGrid" class="grid grid-cols-1 md:grid-cols-3 gap-6"></div>
+            <div id="tab-documents" class="tab-content hidden space-y-5">
+                <div class="rounded-2xl bg-gradient-to-r from-indigo-700 to-violet-600 p-5 sm:p-7 text-white shadow-lg">
+                    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                        <div><p class="text-indigo-100 text-sm">Dijital arşiv</p><h2 class="text-2xl font-extrabold mt-1">Belgelerim</h2><p class="text-indigo-100 text-sm mt-1">Belgeleri tek yerden kaydedin, görüntüleyin ve işlemlerle ilişkilendirin.</p></div>
+                        <div class="rounded-xl bg-white/15 px-4 py-3"><span class="text-xs text-indigo-100">Arşivdeki belge</span><div id="documentCount" class="text-2xl font-bold">0</div></div>
+                    </div>
+                </div>
+                <div id="documentFormCard" class="bg-white p-4 sm:p-6 rounded-2xl shadow-sm border border-gray-100">
+                    <div class="flex items-center justify-between gap-3 mb-4"><div><h3 id="documentFormTitle" class="text-lg font-bold text-gray-900">Yeni Belge Ekle</h3><p class="text-sm text-gray-500">PDF, görsel veya Office belgesi ekleyebilirsiniz.</p></div><span class="rounded-lg bg-indigo-50 p-3 text-indigo-600"><i class="fa-solid fa-file-circle-plus text-xl"></i></span></div>
+                    <form id="documentForm" onsubmit="saveDocument(event)" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <input type="hidden" id="editDocumentId">
+                        <div><label class="block text-xs font-semibold text-gray-600 mb-1">Belge adı *</label><input id="docTitle" required class="w-full p-3 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500" placeholder="Örn. Elektrik faturası"></div>
+                        <div><label class="block text-xs font-semibold text-gray-600 mb-1">Belge türü</label><select id="docCategory" class="w-full p-3 border border-gray-200 rounded-xl text-sm bg-white"><option>Fatura</option><option>Fiş</option><option>Makbuz</option><option>Sözleşme</option><option>Garanti Belgesi</option><option>Banka Belgesi</option><option>Kimlik / Resmî Belge</option><option>Diğer</option></select></div>
+                        <div><label class="block text-xs font-semibold text-gray-600 mb-1">Belge tarihi *</label><input type="date" id="docDate" required class="w-full p-3 border border-gray-200 rounded-xl text-sm"></div>
+                        <div><label class="block text-xs font-semibold text-gray-600 mb-1">Tutar (₺)</label><input type="number" min="0" step="0.01" id="docAmount" class="w-full p-3 border border-gray-200 rounded-xl text-sm" placeholder="İsteğe bağlı"></div>
+                        <div><label class="block text-xs font-semibold text-gray-600 mb-1">İlgili işlem (isteğe bağlı)</label><select id="docTransaction" class="w-full p-3 border border-gray-200 rounded-xl text-sm bg-white"><option value="">İşlemle ilişkilendirme</option></select></div>
+                        <div><label class="block text-xs font-semibold text-gray-600 mb-1">Belge dosyası</label><input type="file" id="docFile" accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt" class="w-full text-sm file:mr-2 file:rounded-lg file:border-0 file:bg-indigo-50 file:px-3 file:py-2 file:font-semibold file:text-indigo-700"><p id="docFileHint" class="text-xs text-gray-400 mt-1">Düzenlerken dosya seçmezseniz mevcut dosya korunur.</p></div>
+                        <div class="sm:col-span-2 lg:col-span-3"><label class="block text-xs font-semibold text-gray-600 mb-1">Açıklama / Not</label><textarea id="docNotes" rows="2" class="w-full p-3 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500" placeholder="Belgeyle ilgili notlar..."></textarea></div>
+                        <div class="sm:col-span-2 lg:col-span-3 flex flex-col-reverse sm:flex-row justify-end gap-2"><button type="button" id="docCancelBtn" onclick="resetDocumentForm()" class="hidden px-4 py-3 rounded-xl bg-gray-100 text-gray-700 font-semibold text-sm">Düzenlemeyi İptal Et</button><button id="docSaveBtn" type="submit" class="px-5 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm shadow-sm"><i class="fa-solid fa-floppy-disk mr-2"></i>Belgeyi Kaydet</button></div>
+                    </form>
+                </div>
+                <div class="bg-white p-4 sm:p-6 rounded-2xl shadow-sm border border-gray-100">
+                    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4"><div><h3 class="text-lg font-bold text-gray-900">Belge Arşivi</h3><p class="text-sm text-gray-500">Arayın, filtreleyin veya kaydı açıp düzenleyin.</p></div><input id="documentSearch" oninput="renderDocuments()" class="w-full sm:max-w-xs p-3 border border-gray-200 rounded-xl text-sm" placeholder="Belge adı, türü veya not ara..."></div>
+                    <div id="documentsGrid" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4"></div>
                 </div>
             </div>
 
@@ -876,7 +903,7 @@
             document.getElementById('currentUserDisplay').innerHTML = `<i class="fa-solid fa-user-check mr-1 text-indigo-600"></i> ${db.currentUser.toUpperCase()}`;
             
             if (db.currentUser === 'aile') {
-                const formsToHide = ['accountFormCard', 'walletFormCard', 'txFormCard', 'billFormCard', 'budgetFormCard'];
+                const formsToHide = ['accountFormCard', 'walletFormCard', 'txFormCard', 'billFormCard', 'budgetFormCard', 'documentFormCard'];
                 formsToHide.forEach(id => {
                     let el = document.getElementById(id);
                     if (el) el.classList.add('hidden');
@@ -884,6 +911,7 @@
             }
 
             document.getElementById('tDate').valueAsDate = new Date();
+            if (document.getElementById('docDate')) document.getElementById('docDate').value = new Date().toISOString().slice(0,10);
             renderAll();
         }
 
@@ -1180,23 +1208,6 @@
             if(document.getElementById('bAccountCode')) document.getElementById('bAccountCode').innerHTML = db.chartOfAccounts.filter(a => !a.isHeader && a.type === 'Gider').map(a => `<option value="${a.code}">${a.code} - ${a.name}</option>`).join('');
         }
 
-        function simulateAICameraScan() {
-            if (db.currentUser === 'aile') return alert('Yetkiniz yok!');
-            const sampleFişler = [
-                { desc: 'AI OCR: Market İaşe Alımı', amount: 485.50, debit: '770.01', credit: '100.01' },
-                { desc: 'AI OCR: Akaryakıt İstasyonu', amount: 1250.00, debit: '770.18', credit: '300.01' }
-            ];
-            let randomFiş = sampleFişler[Math.floor(Math.random() * sampleFişler.length)];
-
-            document.getElementById('tAmount').value = randomFiş.amount;
-            document.getElementById('tDebitCode').value = randomFiş.debit;
-            document.getElementById('tCreditCode').value = randomFiş.credit;
-            document.getElementById('tDesc').value = randomFiş.desc;
-            document.getElementById('tType').value = 'Gider';
-
-            alert(`📷 OCR Tarama Başarılı: ${randomFiş.desc} (₺${randomFiş.amount})`);
-        }
-
         function saveTransaction(e) {
             e.preventDefault();
             if (db.currentUser === 'aile') return alert('Yetkiniz yok!');
@@ -1207,13 +1218,11 @@
             const wallet = document.getElementById('tCreditCode').value;
             const date = document.getElementById('tDate').value;
             const desc = document.getElementById('tDesc').value;
-            const receiptFile = document.getElementById('tReceipt').files[0];
-
-            const processSave = (receiptData) => {
+            const processSave = () => {
                 let newTxId = editId ? Number(editId) : Date.now();
                 let txObj = {
                     id: newTxId, type, amount, code, wallet, date, desc,
-                    receipt: receiptData || (editId ? db.transactions.find(t => t.id == editId).receipt : null)
+                    receipt: editId ? ((db.transactions.find(t => t.id == editId) || {}).receipt || null) : null
                 };
 
                 if (editId) {
@@ -1223,28 +1232,13 @@
                     db.transactions.push(txObj);
                 }
 
-                if (receiptData) {
-                    let docIdx = db.documents.findIndex(d => d.id == newTxId);
-                    if (docIdx !== -1) {
-                        db.documents[docIdx] = { id: newTxId, date, desc, amount, image: receiptData };
-                    } else {
-                        db.documents.push({ id: newTxId, date, desc, amount, image: receiptData });
-                    }
-                }
-
                 saveDB();
                 renderAll();
                 resetTxForm();
                 alert('İşlem kaydedildi!');
             };
 
-            if (receiptFile) {
-                const reader = new FileReader();
-                reader.onload = function(ev) { processSave(ev.target.result); };
-                reader.readAsDataURL(receiptFile);
-            } else {
-                processSave(null);
-            }
+            processSave();
         }
 
         function editTransaction(id) {
@@ -1269,8 +1263,8 @@
             document.getElementById('editTxId').value = '';
             document.getElementById('tAmount').value = '';
             document.getElementById('tDesc').value = '';
-            document.getElementById('tReceipt').value = '';
             document.getElementById('tDate').valueAsDate = new Date();
+            if (document.getElementById('docDate')) document.getElementById('docDate').value = new Date().toISOString().slice(0,10);
             document.getElementById('txFormTitle').textContent = 'Merkezi Fiş ve İşlem Girişi / Düzenleme';
             document.getElementById('txSubmitBtn').textContent = 'İşlemi Kaydet';
             document.getElementById('txCancelBtn').classList.add('hidden');
@@ -1316,33 +1310,123 @@
         }
 
         function renderDocuments() {
-            let html = '';
-            let docs = db.documents;
-            if (docs.length === 0) {
-                html = `<div class="col-span-3 text-center py-8 text-gray-400"><i class="fa-solid fa-folder-open text-4xl mb-2 text-gray-300"></i><p>Belge bulunmuyor.</p></div>`;
-            } else {
-                docs.forEach(d => {
-                    html += `
-                        <div class="bg-gray-50 border rounded-xl p-4 space-y-3 shadow-sm">
-                            <div class="flex justify-between items-center text-xs text-gray-500">
-                                <span><i class="fa-regular fa-calendar mr-1"></i> ${d.date}</span>
-                                <span class="font-bold text-gray-900">₺${Number(d.amount).toLocaleString('tr-TR', {minimumFractionDigits: 2})}</span>
-                            </div>
-                            <p class="text-sm font-semibold text-gray-800">${d.desc}</p>
-                            <div class="flex justify-center">
-                                <img src="${d.image}" onclick="showReceipt('${d.image}')" class="h-36 object-cover rounded-lg border cursor-pointer hover:opacity-90 transition shadow" alt="Belge">
-                            </div>
-                            <div class="flex justify-end gap-2 pt-2 border-t">
-                                ${db.currentUser !== 'aile' ? `
-                                    <button onclick="editTransaction(${d.id})" class="bg-indigo-50 text-indigo-600 px-3 py-1 rounded text-xs font-semibold">Düzenle</button>
-                                    <button onclick="deleteTransaction(${d.id})" class="bg-red-50 text-red-600 px-3 py-1 rounded text-xs font-semibold">Sil</button>
-                                ` : ''}
-                            </div>
-                        </div>
-                    `;
-                });
+            const grid = document.getElementById('documentsGrid');
+            if (!grid) return;
+            const search = (document.getElementById('documentSearch')?.value || '').toLocaleLowerCase('tr-TR');
+            const docs = (db.documents || []).filter(d => [d.title,d.category,d.notes,d.desc].join(' ').toLocaleLowerCase('tr-TR').includes(search));
+            const count = document.getElementById('documentCount');
+            if (count) count.textContent = (db.documents || []).length;
+            const txSelect = document.getElementById('docTransaction');
+            if (txSelect) {
+                const selected = txSelect.value;
+                txSelect.innerHTML = '<option value="">İşlemle ilişkilendirme</option>' + db.transactions.slice().reverse().map(t => `<option value="${t.id}">${escapeHtml(t.date)} · ${escapeHtml(t.desc)} · ₺${Number(t.amount).toLocaleString('tr-TR')}</option>`).join('');
+                txSelect.value = selected;
             }
-            document.getElementById('documentsGrid').innerHTML = html;
+            if (!docs.length) {
+                grid.innerHTML = `<div class="col-span-full rounded-xl border border-dashed border-gray-300 p-8 text-center text-gray-400"><i class="fa-regular fa-folder-open text-4xl mb-3"></i><p class="font-semibold">${search ? 'Aramanızla eşleşen belge yok.' : 'Henüz belge eklenmemiş.'}</p><p class="text-sm mt-1">Yukarıdaki formdan ilk belgenizi arşive ekleyin.</p></div>`;
+                return;
+            }
+            grid.innerHTML = docs.slice().sort((a,b) => (b.date || '').localeCompare(a.date || '')).map(d => {
+                const fileName = d.fileName || (d.image ? 'Ekli görsel' : 'Dosya eklenmemiş');
+                const isImage = d.image && String(d.image).startsWith('data:image/');
+                const tx = d.transactionId ? db.transactions.find(t => String(t.id) === String(d.transactionId)) : null;
+                return `<article class="group overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm hover:shadow-md transition">
+                    <div class="relative flex h-36 items-center justify-center bg-gradient-to-br from-slate-50 to-indigo-50">
+                        ${isImage ? `<img src="${d.image}" onclick="showReceipt('${d.image}')" class="h-full w-full object-cover cursor-pointer" alt="Belge önizlemesi">` : `<div class="text-center text-indigo-500"><i class="fa-solid ${d.image ? 'fa-file-lines' : 'fa-file-circle-plus'} text-4xl"></i><p class="mt-2 max-w-[240px] truncate px-3 text-xs text-gray-500">${escapeHtml(fileName)}</p></div>`}
+                        <span class="absolute left-3 top-3 rounded-full bg-white/95 px-2.5 py-1 text-xs font-semibold text-indigo-700 shadow-sm">${escapeHtml(d.category || 'Fiş')}</span>
+                    </div>
+                    <div class="space-y-3 p-4">
+                        <div class="flex items-start justify-between gap-3"><div class="min-w-0"><h4 class="font-bold text-gray-900 break-words">${escapeHtml(d.title || d.desc || 'Belgesiz kayıt')}</h4><p class="mt-1 text-xs text-gray-500"><i class="fa-regular fa-calendar mr-1"></i>${escapeHtml(d.date || '')}</p></div>${d.amount ? `<span class="shrink-0 text-sm font-bold text-emerald-700">₺${Number(d.amount).toLocaleString('tr-TR',{minimumFractionDigits:2})}</span>` : ''}</div>
+                        ${d.notes ? `<p class="text-sm text-gray-600 whitespace-pre-line break-words">${escapeHtml(d.notes)}</p>` : ''}
+                        ${tx ? `<button onclick="editTransaction(${tx.id})" class="text-left text-xs text-indigo-600 hover:underline"><i class="fa-solid fa-link mr-1"></i>İşlem: ${escapeHtml(tx.desc)}</button>` : ''}
+                        <p class="truncate text-xs text-gray-400"><i class="fa-solid fa-paperclip mr-1"></i>${escapeHtml(fileName)}</p>
+                        <div class="flex flex-wrap gap-2 border-t border-gray-100 pt-3">
+                            ${d.image ? `<button onclick="openDocumentFile(${JSON.stringify(String(d.image))},${JSON.stringify(fileName)})" class="flex-1 rounded-lg bg-indigo-50 px-3 py-2 text-xs font-semibold text-indigo-700"><i class="fa-solid fa-eye mr-1"></i>Görüntüle</button>` : ''}
+                            ${db.currentUser !== 'aile' ? `<button onclick="editDocument(${d.id})" class="rounded-lg bg-gray-100 px-3 py-2 text-xs font-semibold text-gray-700"><i class="fa-solid fa-pen mr-1"></i>Düzenle</button><button onclick="deleteDocument(${d.id})" class="rounded-lg bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-600"><i class="fa-solid fa-trash mr-1"></i>Sil</button>` : ''}
+                        </div>
+                    </div></article>`;
+            }).join('');
+        }
+
+        function escapeHtml(value) {
+            return String(value ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+        }
+
+        function saveDocument(e) {
+            e.preventDefault();
+            if (db.currentUser === 'aile') return alert('Yetkiniz yok!');
+            const editId = document.getElementById('editDocumentId').value;
+            const existing = editId ? db.documents.find(d => String(d.id) === String(editId)) : null;
+            const file = document.getElementById('docFile').files[0];
+            const finish = (fileData, fileName) => {
+                const doc = {
+                    id: existing ? existing.id : Date.now(),
+                    title: document.getElementById('docTitle').value.trim(),
+                    category: document.getElementById('docCategory').value,
+                    date: document.getElementById('docDate').value,
+                    amount: Number(document.getElementById('docAmount').value || 0),
+                    transactionId: document.getElementById('docTransaction').value || '',
+                    notes: document.getElementById('docNotes').value.trim(),
+                    image: fileData !== null ? fileData : (existing ? existing.image || null : null),
+                    fileName: fileName || (existing ? existing.fileName || '' : '')
+                };
+                if (existing) db.documents[db.documents.findIndex(d => String(d.id) === String(editId))] = doc;
+                else db.documents.push(doc);
+                saveDB(); renderAll(); resetDocumentForm();
+                alert(existing ? 'Belge güncellendi.' : 'Belge arşive kaydedildi.');
+            };
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = ev => finish(ev.target.result, file.name);
+                reader.onerror = () => alert('Dosya okunamadı. Lütfen tekrar deneyin.');
+                reader.readAsDataURL(file);
+            } else finish(null, null);
+        }
+
+        function editDocument(id) {
+            if (db.currentUser === 'aile') return alert('Yetkiniz yok!');
+            const d = db.documents.find(x => String(x.id) === String(id));
+            if (!d) return;
+            document.getElementById('editDocumentId').value = d.id;
+            document.getElementById('docTitle').value = d.title || d.desc || '';
+            document.getElementById('docCategory').value = d.category || 'Fiş';
+            document.getElementById('docDate').value = d.date || new Date().toISOString().slice(0,10);
+            document.getElementById('docAmount').value = d.amount || '';
+            document.getElementById('docTransaction').value = d.transactionId || '';
+            document.getElementById('docNotes').value = d.notes || '';
+            document.getElementById('docFileHint').textContent = 'Mevcut dosya: ' + (d.fileName || 'Ekli belge') + ' · Yeni dosya seçerseniz değiştirilir.';
+            document.getElementById('documentFormTitle').textContent = 'Belgeyi Düzenle';
+            document.getElementById('docSaveBtn').innerHTML = '<i class="fa-solid fa-floppy-disk mr-2"></i>Değişiklikleri Kaydet';
+            document.getElementById('docCancelBtn').classList.remove('hidden');
+            document.getElementById('documentFormCard').scrollIntoView({behavior:'smooth',block:'start'});
+        }
+
+        function resetDocumentForm() {
+            const form = document.getElementById('documentForm');
+            if (!form) return;
+            form.reset();
+            document.getElementById('editDocumentId').value = '';
+            document.getElementById('docDate').value = new Date().toISOString().slice(0,10);
+            document.getElementById('documentFormTitle').textContent = 'Yeni Belge Ekle';
+            document.getElementById('docSaveBtn').innerHTML = '<i class="fa-solid fa-floppy-disk mr-2"></i>Belgeyi Kaydet';
+            document.getElementById('docCancelBtn').classList.add('hidden');
+            document.getElementById('docFileHint').textContent = 'Düzenlerken dosya seçmezseniz mevcut dosya korunur.';
+        }
+
+        function deleteDocument(id) {
+            if (db.currentUser === 'aile') return alert('Yetkiniz yok!');
+            if (!confirm('Bu belgeyi arşivden silmek istediğinize emin misiniz?')) return;
+            db.documents = (db.documents || []).filter(d => String(d.id) !== String(id));
+            saveDB(); renderAll();
+            if (String(document.getElementById('editDocumentId').value) === String(id)) resetDocumentForm();
+        }
+
+        function openDocumentFile(data, name) {
+            if (!data) return;
+            if (String(data).startsWith('data:image/')) return showReceipt(data);
+            const win = window.open();
+            if (!win) return alert('Dosya yeni sekmede açılamadı. Tarayıcı açılır penceresine izin verin.');
+            win.document.write('<title>' + escapeHtml(name) + '</title><p style="font:16px sans-serif;padding:24px">Bu belge tarayıcıda doğrudan önizlenemiyorsa dosyayı indirmek için bağlantıyı kullanın.</p><a download="' + escapeHtml(name) + '" href="' + data + '">Belgeyi indir</a>');
         }
 
         function showReceipt(imgSrc) {
