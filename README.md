@@ -1,1 +1,1608 @@
-# Ev-Muhasebem
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EvDefteri - Ön Muhasebe & Hesap Ekstresi</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- SheetJS (Excel Export) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <!-- jsPDF (PDF Export) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#4f46e5',
+                        secondary: '#10b981'
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gray-50 text-gray-800 font-sans antialiased">
+
+    <!-- GİRİŞ PORTALI -->
+    <div id="loginSection" class="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-900 to-slate-900 p-4">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8">
+            <div class="text-center mb-8">
+                <div class="inline-flex items-center justify-center w-16 h-16 bg-indigo-100 text-indigo-600 rounded-full mb-4 text-2xl font-bold shadow-inner">
+                    <i class="fa-solid fa-house-chimney"></i>
+                </div>
+                <h1 class="text-3xl font-extrabold text-gray-900">EvDefteri</h1>
+                <p class="text-gray-500 text-sm mt-1">Aile Ön Muhasebe Portalı</p>
+            </div>
+            
+            <form id="loginForm" onsubmit="handleLogin(event)" class="space-y-6">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Kullanıcı Adı</label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400"><i class="fa-solid fa-user"></i></span>
+                        <input type="text" id="loginUser" required class="pl-10 w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none" placeholder="admin veya aile">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Şifre</label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400"><i class="fa-solid fa-lock"></i></span>
+                        <input type="password" id="loginPass" required class="pl-10 w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none" placeholder="••••">
+                    </div>
+                </div>
+                <div id="loginError" class="text-red-500 text-xs hidden font-medium text-center"></div>
+                <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 rounded-lg shadow-lg transition duration-200">
+                    Sisteme Giriş Yap
+                </button>
+            </form>
+            <div class="mt-6 text-center text-xs text-gray-400">
+                Varsayılan Giriş: <span class="font-semibold text-gray-600">admin</span> / Şifre: <span class="font-semibold text-gray-600">1234</span> (Veya <span class="font-semibold text-gray-600">aile</span> / 1234)
+            </div>
+        </div>
+    </div>
+
+    <!-- ANA UYGULAMA PANELİ -->
+    <div id="appSection" class="hidden min-h-screen flex flex-col">
+        <!-- Navbar -->
+        <header class="bg-white border-b border-gray-200 sticky top-0 z-50">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+                <div class="flex items-center space-x-3">
+                    <div class="bg-indigo-600 text-white p-2 rounded-lg text-xl shadow">
+                        <i class="fa-solid fa-network-wired"></i>
+                    </div>
+                    <span class="text-xl font-bold text-gray-900 tracking-tight">EvDefteri Ön Muhasebe</span>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <span id="currentUserDisplay" class="text-sm font-medium text-gray-600 bg-gray-100 px-3 py-1.5 rounded-full"></span>
+                    <button onclick="handleLogout()" class="text-red-600 hover:text-red-800 text-sm font-semibold flex items-center gap-1 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-lg transition">
+                        <i class="fa-solid fa-right-from-bracket"></i> Çıkış
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- İçerik Alanı & Sekmeler -->
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 w-full flex-grow">
+            <div class="flex space-x-2 overflow-x-auto pb-4 mb-6 border-b border-gray-200">
+                <button onclick="switchTab('dashboard')" id="btn-dashboard" class="tab-btn px-4 py-2 font-medium text-sm rounded-lg bg-indigo-600 text-white transition whitespace-nowrap shadow-sm">
+                    <i class="fa-solid fa-chart-pie mr-2"></i> Özet Paneli
+                </button>
+                <button onclick="switchTab('chartofaccounts')" id="btn-chartofaccounts" class="tab-btn px-4 py-2 font-medium text-sm rounded-lg bg-white text-gray-600 hover:bg-gray-100 transition whitespace-nowrap">
+                    <i class="fa-solid fa-sitemap mr-2"></i> Hesap Planı & Ekstre
+                </button>
+                <button onclick="switchTab('accounts')" id="btn-accounts" class="tab-btn px-4 py-2 font-medium text-sm rounded-lg bg-white text-gray-600 hover:bg-gray-100 transition whitespace-nowrap">
+                    <i class="fa-solid fa-building-columns mr-2"></i> Kasa & Bankalar
+                </button>
+                <button onclick="switchTab('transactions')" id="btn-transactions" class="tab-btn px-4 py-2 font-medium text-sm rounded-lg bg-white text-gray-600 hover:bg-gray-100 transition whitespace-nowrap">
+                    <i class="fa-solid fa-receipt mr-2"></i> Fiş & İşlemler
+                </button>
+                <button onclick="switchTab('documents')" id="btn-documents" class="tab-btn px-4 py-2 font-medium text-sm rounded-lg bg-white text-gray-600 hover:bg-gray-100 transition whitespace-nowrap">
+                    <i class="fa-solid fa-folder-open mr-2"></i> Belgeler
+                </button>
+                <button onclick="switchTab('trialbalance')" id="btn-trialbalance" class="tab-btn px-4 py-2 font-medium text-sm rounded-lg bg-white text-gray-600 hover:bg-gray-100 transition whitespace-nowrap">
+                    <i class="fa-solid fa-table-cells mr-2"></i> Mizan (Dönemsel)
+                </button>
+                <button onclick="switchTab('bills')" id="btn-bills" class="tab-btn px-4 py-2 font-medium text-sm rounded-lg bg-white text-gray-600 hover:bg-gray-100 transition whitespace-nowrap">
+                    <i class="fa-solid fa-file-invoice-dollar mr-2"></i> Faturalar
+                </button>
+                <button onclick="switchTab('debts')" id="btn-debts" class="tab-btn px-4 py-2 font-medium text-sm rounded-lg bg-white text-gray-600 hover:bg-gray-100 transition whitespace-nowrap">
+                    <i class="fa-solid fa-hand-holding-dollar mr-2"></i> Borçlar & Taksitler
+                </button>
+                <button onclick="switchTab('budgets')" id="btn-budgets" class="tab-btn px-4 py-2 font-medium text-sm rounded-lg bg-white text-gray-600 hover:bg-gray-100 transition whitespace-nowrap">
+                    <i class="fa-solid fa-triangle-exclamation mr-2"></i> Bütçe Limitleri
+                </button>
+                <button onclick="switchTab('reports')" id="btn-reports" class="tab-btn px-4 py-2 font-medium text-sm rounded-lg bg-white text-gray-600 hover:bg-gray-100 transition whitespace-nowrap">
+                    <i class="fa-solid fa-file-arrow-down mr-2"></i> Raporlar
+                </button>
+            </div>
+
+            <!-- 1. DASHBOARD -->
+            <div id="tab-dashboard" class="tab-content space-y-6">
+                <!-- Dönem Filtresi -->
+                <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between">
+                    <h3 class="text-sm font-bold text-gray-700"><i class="fa-solid fa-filter mr-1 text-indigo-600"></i> Özet Rapor Dönemi</h3>
+                    <select id="dashboardPeriodSelect" onchange="renderDashboard()" class="p-2 border rounded-lg text-sm bg-gray-50 font-medium">
+                        <option value="current_month">Güncel Ay (Eylül 2026)</option>
+                        <option value="all">Tüm Zamanlar (Genel)</option>
+                        <option value="2026-08">Ağustos 2026</option>
+                        <option value="2026-09">Eylül 2026</option>
+                    </select>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between">
+                        <div>
+                            <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Toplam Varlıklar</p>
+                            <h3 id="statTotalAssets" class="text-2xl font-bold text-gray-900 mt-1">₺0.00</h3>
+                        </div>
+                        <div class="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center text-xl"><i class="fa-solid fa-wallet"></i></div>
+                    </div>
+                    <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between">
+                        <div>
+                            <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Dönem Geliri</p>
+                            <h3 id="statMonthlyIncome" class="text-2xl font-bold text-emerald-600 mt-1">₺0.00</h3>
+                        </div>
+                        <div class="w-12 h-12 bg-green-50 text-green-600 rounded-full flex items-center justify-center text-xl"><i class="fa-solid fa-arrow-trend-up"></i></div>
+                    </div>
+                    <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between">
+                        <div>
+                            <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Dönem Gideri</p>
+                            <h3 id="statMonthlyExpense" class="text-2xl font-bold text-red-600 mt-1">₺0.00</h3>
+                        </div>
+                        <div class="w-12 h-12 bg-red-50 text-red-600 rounded-full flex items-center justify-center text-xl"><i class="fa-solid fa-arrow-trend-down"></i></div>
+                    </div>
+                    <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between">
+                        <div>
+                            <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Ödenmemiş Fatura</p>
+                            <h3 id="statPendingBills" class="text-2xl font-bold text-amber-600 mt-1">0 Adet</h3>
+                        </div>
+                        <div class="w-12 h-12 bg-amber-50 text-amber-600 rounded-full flex items-center justify-center text-xl"><i class="fa-solid fa-file-invoice"></i></div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 lg:col-span-2">
+                        <h3 class="text-lg font-bold text-gray-800 mb-4">Son Fiş & İşlemler</h3>
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-gray-200">
+                                <thead>
+                                    <tr>
+                                        <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Tarih</th>
+                                        <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Kasa / Banka</th>
+                                        <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Açıklama</th>
+                                        <th class="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Tutar</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="recentTransactionsTable" class="divide-y divide-gray-200 text-sm"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                        <h3 class="text-lg font-bold text-gray-800 mb-4">Bütçe Limit Uyarıları</h3>
+                        <div id="budgetWarningContainer" class="space-y-4"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2. HESAP PLANI & EKSTRE -->
+            <div id="tab-chartofaccounts" class="tab-content hidden space-y-6">
+                <!-- Yeni Hesap Ekleme Kartı (Admin only) -->
+                <div id="accountFormCard" class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                    <h3 id="accountFormTitle" class="text-lg font-bold text-gray-800 mb-4">Yeni Hesap Ekle</h3>
+                    <form onsubmit="saveAccountCode(event)" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <input type="hidden" id="editOriginalCode">
+                        <div>
+                            <label class="block text-xs font-medium text-gray-600 mb-1">Hesap Kodu</label>
+                            <input type="text" id="newAccCode" required class="w-full p-2.5 border rounded-lg text-sm" placeholder="Örn: 100.02">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-600 mb-1">Hesap Adı</label>
+                            <input type="text" id="newAccName" required class="w-full p-2.5 border rounded-lg text-sm" placeholder="Örn: Yeni Alt Hesap">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-600 mb-1">Hesap Sınıfı</label>
+                            <select id="newAccType" class="w-full p-2.5 border rounded-lg text-sm bg-gray-50">
+                                <option value="Aktif">Aktif (Varlık)</option>
+                                <option value="Pasif">Pasif (Kaynak)</option>
+                                <option value="Gelir">Gelir</option>
+                                <option value="Gider">Gider</option>
+                            </select>
+                        </div>
+                        <div class="flex items-end gap-2">
+                            <button type="submit" id="accountSubmitBtn" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 rounded-lg text-sm shadow">Kaydet</button>
+                            <button type="button" onclick="resetAccountForm()" id="accountCancelBtn" class="hidden bg-gray-300 hover:bg-gray-400 text-gray-700 px-3 py-2.5 rounded-lg text-sm font-semibold">İptal</button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Hesap Planı ve Arama -->
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                    <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-3">
+                        <h3 class="text-lg font-bold text-gray-800">Hesap Planı & Sorgulama</h3>
+                        <div class="relative w-full md:w-72">
+                            <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400"><i class="fa-solid fa-magnifying-glass"></i></span>
+                            <input type="text" id="accountSearchInput" oninput="renderChartOfAccounts()" class="pl-10 w-full p-2 border rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none" placeholder="Kod veya hesap adı ile ara...">
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto max-h-96 overflow-y-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="sticky top-0 bg-gray-50 z-10">
+                                <tr>
+                                    <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">Hesap Kodu</th>
+                                    <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">Hesap Adı</th>
+                                    <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">Sınıf</th>
+                                    <th class="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase">Borç (₺)</th>
+                                    <th class="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase">Alacak (₺)</th>
+                                    <th class="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase">Bakiye (₺)</th>
+                                    <th class="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase">İşlemler</th>
+                                </tr>
+                            </thead>
+                            <tbody id="chartOfAccountsTable" class="divide-y divide-gray-200 text-sm"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Hesap Ekstresi Alanı (Muavin Defteri Gibi) -->
+                <div id="accountStatementSection" class="hidden bg-white p-6 rounded-xl shadow-sm border border-indigo-100">
+                    <div class="flex justify-between items-center mb-4 pb-2 border-b">
+                        <div>
+                            <span class="text-xs font-bold text-indigo-600 uppercase">HESAP EKSTRESİ (MUAVİN DEFTERİ)</span>
+                            <h3 id="statementTitle" class="text-xl font-bold text-gray-900">Hesap Adı</h3>
+                        </div>
+                        <button onclick="closeStatement()" class="text-gray-400 hover:text-gray-600 text-lg"><i class="fa-solid fa-xmark"></i></button>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead>
+                                <tr class="bg-indigo-50/50">
+                                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Tarih</th>
+                                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">İşlem / Açıklama</th>
+                                    <th class="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Borç (₺)</th>
+                                    <th class="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Alacak (₺)</th>
+                                    <th class="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Güncel Bakiye (₺)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="accountStatementTable" class="divide-y divide-gray-200 text-sm"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3. KASA & BANKALAR -->
+            <div id="tab-accounts" class="tab-content hidden space-y-6">
+                <div id="walletFormCard" class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                    <h3 class="text-lg font-bold text-gray-800 mb-4">Yeni Kasa veya Banka Hesabı Tanımla</h3>
+                    <form onsubmit="addWallet(event)" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-xs font-medium text-gray-600 mb-1">Hesap Adı</label>
+                            <input type="text" id="walletName" required class="w-full p-2.5 border rounded-lg text-sm" placeholder="Örn: Ziraat Bankası">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-600 mb-1">Tür</label>
+                            <select id="walletType" class="w-full p-2.5 border rounded-lg text-sm bg-gray-50">
+                                <option value="Kasa">Nakit Kasa</option>
+                                <option value="Banka">Banka</option>
+                                <option value="Kredi Kartı">Kredi Kartı</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-600 mb-1">Açılış Bakiyesi (₺)</label>
+                            <input type="number" step="0.01" id="walletBalance" required class="w-full p-2.5 border rounded-lg text-sm" placeholder="0.00">
+                        </div>
+                        <div class="md:col-span-3 flex justify-end">
+                            <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-6 py-2.5 rounded-lg text-sm shadow">Hesap Ekle</button>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                    <h3 class="text-lg font-bold text-gray-800 mb-4">Kasa ve Banka Durumları</h3>
+                    <div id="walletsGrid" class="grid grid-cols-1 md:grid-cols-3 gap-4"></div>
+                </div>
+            </div>
+
+            <!-- 4. FİŞ & İŞLEMLER -->
+            <div id="tab-transactions" class="tab-content hidden space-y-6">
+                <div id="txFormCard" class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                    <div class="flex justify-between items-center mb-2">
+                        <h3 id="txFormTitle" class="text-lg font-bold text-gray-800">Merkezi Fiş ve İşlem Girişi / Düzenleme</h3>
+                        <!-- Kameraya Okut Butonu -->
+                        <button type="button" onclick="simulateAICameraScan()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold px-3 py-2 rounded-lg shadow flex items-center gap-1.5 transition">
+                            <i class="fa-solid fa-camera"></i> Kameraya Okut (AI)
+                        </button>
+                    </div>
+                    <form onsubmit="saveTransaction(event)" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <input type="hidden" id="editTxId">
+                        <div>
+                            <label class="block text-xs font-medium text-gray-600 mb-1">İşlem Türü</label>
+                            <select id="tType" class="w-full p-2.5 border rounded-lg text-sm bg-gray-50">
+                                <option value="Gider">Gider / Ödeme (-)</option>
+                                <option value="Gelir">Gelir / Tahsilat (+)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-600 mb-1">Tutar (₺)</label>
+                            <input type="number" step="0.01" id="tAmount" required class="w-full p-2.5 border rounded-lg text-sm" placeholder="0.00">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-600 mb-1">Borçlu Hesap Kodu</label>
+                            <select id="tDebitCode" class="w-full p-2.5 border rounded-lg text-sm bg-gray-50" required></select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-600 mb-1">Alacaklı Hesap Kodu (Kasa/Banka/Kart/Kişi)</label>
+                            <select id="tCreditCode" class="w-full p-2.5 border rounded-lg text-sm bg-gray-50" required></select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-600 mb-1">Tarih</label>
+                            <input type="date" id="tDate" required class="w-full p-2.5 border rounded-lg text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-600 mb-1">Açıklama</label>
+                            <input type="text" id="tDesc" required class="w-full p-2.5 border rounded-lg text-sm" placeholder="Açıklama yazınız">
+                        </div>
+                        <div class="md:col-span-2">
+                            <label class="block text-xs font-medium text-gray-600 mb-1">Fiş / Fatura Görseli</label>
+                            <input type="file" id="tReceipt" accept="image/*" class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700">
+                        </div>
+                        <div class="md:col-span-3 flex justify-end gap-2">
+                            <button type="button" onclick="resetTxForm()" id="txCancelBtn" class="hidden bg-gray-300 hover:bg-gray-400 text-gray-700 font-semibold px-4 py-2.5 rounded-lg text-sm">İptal</button>
+                            <button type="submit" id="txSubmitBtn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-6 py-2.5 rounded-lg text-sm shadow">İşlemi Kaydet</button>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                    <h3 class="text-lg font-bold text-gray-800 mb-4">Yevmiye Defteri (İşlenmiş İşlemler)</h3>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead>
+                                <tr>
+                                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Tarih</th>
+                                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Tür</th>
+                                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Borçlu / Alacaklı Hesap</th>
+                                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Açıklama</th>
+                                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Fiş</th>
+                                    <th class="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Tutar</th>
+                                    <th class="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">İşlemler</th>
+                                </tr>
+                            </thead>
+                            <tbody id="allTransactionsTable" class="divide-y divide-gray-200 text-sm"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 5. BELGELER SEKMESİ -->
+            <div id="tab-documents" class="tab-content hidden space-y-6">
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                    <h3 class="text-lg font-bold text-gray-800 mb-1">Arşivlenen Fiş ve Belgeler Sekmesi</h3>
+                    <p class="text-sm text-gray-500 mb-6">Sisteme yüklenen veya yapay zeka kamerasıyla okutulan tüm belgeler burada saklanır.</p>
+                    <div id="documentsGrid" class="grid grid-cols-1 md:grid-cols-3 gap-6"></div>
+                </div>
+            </div>
+
+            <!-- 6. MİZAN (DÖNEMSEL / TARİH ARALIĞI) -->
+            <div id="tab-trialbalance" class="tab-content hidden space-y-6">
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                    <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-6 gap-4">
+                        <div>
+                            <h3 class="text-lg font-bold text-gray-800">Dönemsel Mizan Raporu</h3>
+                            <p class="text-sm text-gray-500">Ay bazında veya iki tarih arasında borç / alacak dökümü.</p>
+                        </div>
+                        <div class="flex flex-wrap items-center gap-3">
+                            <div>
+                                <label class="block text-xs text-gray-500 mb-1">Dönem Seç:</label>
+                                <select id="mizanPeriod" onchange="renderTrialBalance()" class="p-2 border rounded-lg text-sm bg-gray-50">
+                                    <option value="all">Genel Mizan (Tüm Zamanlar)</option>
+                                    <option value="2026-01">Ocak 2026</option>
+                                    <option value="2026-02">Şubat 2026</option>
+                                    <option value="2026-03">Mart 2026</option>
+                                    <option value="2026-04">Nisan 2026</option>
+                                    <option value="2026-05">Mayıs 2026</option>
+                                    <option value="2026-06">Haziran 2026</option>
+                                    <option value="2026-07">Temmuz 2026</option>
+                                    <option value="2026-08">Ağustos 2026</option>
+                                    <option value="2026-09" selected>Eylül 2026 (Bu Ay)</option>
+                                    <option value="custom">İki Tarih Arası</option>
+                                </select>
+                            </div>
+                            <div id="customDateRangeBox" class="hidden flex items-center gap-2">
+                                <div>
+                                    <label class="block text-xs text-gray-500 mb-1">Başlangıç:</label>
+                                    <input type="date" id="mizanStartDate" onchange="renderTrialBalance()" class="p-2 border rounded-lg text-sm">
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-gray-500 mb-1">Bitiş:</label>
+                                    <input type="date" id="mizanEndDate" onchange="renderTrialBalance()" class="p-2 border rounded-lg text-sm">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead>
+                                <tr class="bg-gray-50">
+                                    <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">Hesap Kodu</th>
+                                    <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">Hesap Adı</th>
+                                    <th class="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase">Borç (₺)</th>
+                                    <th class="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase">Alacak (₺)</th>
+                                    <th class="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase">Bakiye (₺)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="trialBalanceTable" class="divide-y divide-gray-200 text-sm"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 7. FATURALAR -->
+            <div id="tab-bills" class="tab-content hidden space-y-6">
+                <div id="billFormCard" class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                    <h3 id="billFormTitle" class="text-lg font-bold text-gray-800 mb-4">Yeni Fatura Tanımla (Tahakkuk)</h3>
+                    <form onsubmit="saveBill(event)" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <input type="hidden" id="editBillId">
+                        <div>
+                            <label class="block text-xs font-medium text-gray-600 mb-1">Kurum / Fatura Adı</label>
+                            <input type="text" id="billName" required class="w-full p-2.5 border rounded-lg text-sm" placeholder="Örn: Elektrik Faturası">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-600 mb-1">İlgili Gider Hesap Kodu</label>
+                            <select id="billAccCode" class="w-full p-2.5 border rounded-lg text-sm bg-gray-50" required></select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-600 mb-1">Tutar (₺)</label>
+                            <input type="number" step="0.01" id="billAmount" required class="w-full p-2.5 border rounded-lg text-sm" placeholder="0.00">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-600 mb-1">Son Ödeme Tarihi</label>
+                            <input type="date" id="billDueDate" required class="w-full p-2.5 border rounded-lg text-sm">
+                        </div>
+                        <div class="md:col-span-4 flex justify-end gap-2">
+                            <button type="button" onclick="resetBillForm()" id="billCancelBtn" class="hidden bg-gray-300 hover:bg-gray-400 text-gray-700 px-3 py-2.5 rounded-lg text-sm font-semibold">İptal</button>
+                            <button type="submit" id="billSubmitBtn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-6 py-2.5 rounded-lg text-sm shadow">Fatura Tahakkuk Et</button>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                    <h3 class="text-lg font-bold text-gray-800 mb-4">Faturalar Listesi</h3>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead>
+                                <tr>
+                                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Kurum</th>
+                                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Hesap Kodu</th>
+                                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Tutar</th>
+                                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Son Ödeme</th>
+                                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Durum</th>
+                                    <th class="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">İşlemler</th>
+                                </tr>
+                            </thead>
+                            <tbody id="billsTable" class="divide-y divide-gray-200 text-sm"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 8. BORÇLAR & TAKSİTLER (300 ve Ters Bakiye Bankalar) -->
+            <div id="tab-debts" class="tab-content hidden space-y-6">
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                    <div class="flex justify-between items-center mb-2">
+                        <h3 class="text-lg font-bold text-gray-800">Borç Takibi (300'lü Hesaplar & Ters Bakiye Veren Bankalar)</h3>
+                        <span class="text-xs bg-indigo-50 text-indigo-700 px-3 py-1 rounded-full font-semibold"><i class="fa-solid fa-rotate mr-1"></i> Hesap Planından Anlık Senkronize</span>
+                    </div>
+                    <p class="text-sm text-gray-500 mb-4">Sistem 300'lü pasif hesapları ve eksiye düşen (ters bakiye veren) banka/kart hesaplarını otomatik olarak algılar ve aşağıda güncel olarak listeler.</p>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead>
+                                <tr>
+                                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Hesap Kodu</th>
+                                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Hesap / Borç Adı</th>
+                                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Kaynak Türü</th>
+                                    <th class="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Güncel Borç / Tutar (₺)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="debtsTable" class="divide-y divide-gray-200 text-sm"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 9. BÜTÇE LİMİTLERİ -->
+            <div id="tab-budgets" class="tab-content hidden space-y-6">
+                <div id="budgetFormCard" class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                    <h3 class="text-lg font-bold text-gray-800 mb-4">Hesap Bazlı Bütçe Limiti Belirle</h3>
+                    <form onsubmit="saveBudget(event)" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-xs font-medium text-gray-600 mb-1">Gider Hesabı</label>
+                            <select id="bAccountCode" class="w-full p-2.5 border rounded-lg text-sm bg-gray-50"></select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-600 mb-1">Aylık Limit (₺)</label>
+                            <input type="number" step="0.01" id="bLimit" required class="w-full p-2.5 border rounded-lg text-sm" placeholder="0.00">
+                        </div>
+                        <div class="flex items-end">
+                            <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 rounded-lg text-sm shadow">Limit Kaydet</button>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                    <h3 class="text-lg font-bold text-gray-800 mb-4">Limit Durumları</h3>
+                    <div id="budgetGrid" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+                </div>
+            </div>
+
+            <!-- 10. RAPORLAR -->
+            <div id="tab-reports" class="tab-content hidden space-y-6">
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                    <h3 class="text-lg font-bold text-gray-800 mb-2">Rapor Dışa Aktarma</h3>
+                    <p class="text-sm text-gray-500 mb-6">Tüm entegre fiş hareketlerini ve mizan özetini Excel veya PDF formatında indirebilirsiniz.</p>
+                    <div class="flex flex-wrap gap-4">
+                        <button onclick="exportToExcel()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-6 py-3 rounded-lg shadow flex items-center gap-2">
+                            <i class="fa-solid fa-file-excel"></i> Excel Olarak İndir (.xlsx)
+                        </button>
+                        <button onclick="exportToPDF()" class="bg-rose-600 hover:bg-rose-700 text-white font-semibold px-6 py-3 rounded-lg shadow flex items-center gap-2">
+                            <i class="fa-solid fa-file-pdf"></i> PDF Mizan Raporu (.pdf)
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- FİŞ ÖNİZLEME MODALI -->
+    <div id="receiptModal" class="fixed inset-0 bg-black/60 hidden flex items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-xl max-w-lg w-full p-6 relative">
+            <button onclick="closeReceiptModal()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-xl"><i class="fa-solid fa-xmark"></i></button>
+            <h3 class="text-lg font-bold text-gray-800 mb-4">Fiş / Fatura Görseli</h3>
+            <div class="flex justify-center">
+                <img id="modalReceiptImg" src="" class="max-h-96 rounded-lg shadow border" alt="Fiş">
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript Mantığı -->
+    <script>
+        const initialChartOfAccounts = [
+            { code: '100', name: 'KASA HESAPLARI', type: 'Aktif', isHeader: true },
+            { code: '100.01', name: 'Nakit Kasa', type: 'Aktif', isHeader: false },
+
+            { code: '102', name: 'BANKA HESAPLARI', type: 'Aktif', isHeader: true },
+            { code: '102.01', name: 'Yapı Kredi', type: 'Aktif', isHeader: false },
+            { code: '102.02', name: 'Akbank', type: 'Aktif', isHeader: false },
+            { code: '102.03', name: 'Garanti', type: 'Aktif', isHeader: false },
+            { code: '102.04', name: 'Ziraat', type: 'Aktif', isHeader: false },
+            { code: '102.05', name: 'Enpara', type: 'Aktif', isHeader: false },
+
+            { code: '120', name: 'ALACAKLAR VE KİŞİLER', type: 'Aktif', isHeader: true },
+            { code: '120.01', name: 'Araba', type: 'Aktif', isHeader: false },
+            { code: '120.02', name: 'Karım', type: 'Aktif', isHeader: false },
+            { code: '120.03', name: 'Babam', type: 'Aktif', isHeader: false },
+            { code: '120.04', name: 'Annem', type: 'Aktif', isHeader: false },
+            { code: '120.05', name: 'Anaokulu', type: 'Aktif', isHeader: false },
+            { code: '120.06', name: 'Tempra Motor', type: 'Aktif', isHeader: false },
+            { code: '120.07', name: 'Demirbaş Malzeme Alımı', type: 'Aktif', isHeader: false },
+            { code: '120.08', name: 'K. Bozoğlu', type: 'Aktif', isHeader: false },
+            { code: '120.09', name: 'Erol Ç.', type: 'Aktif', isHeader: false },
+            { code: '120.10', name: 'Recep', type: 'Aktif', isHeader: false },
+            { code: '120.11', name: 'Adil', type: 'Aktif', isHeader: false },
+            { code: '120.12', name: 'Halit Usta', type: 'Aktif', isHeader: false },
+
+            { code: '300', name: 'BORÇLAR VE KREDİ KARTLARI', type: 'Pasif', isHeader: true },
+            { code: '300.01', name: 'Yapı Kredi Kart', type: 'Pasif', isHeader: false },
+            { code: '300.02', name: 'Akbank Kart', type: 'Pasif', isHeader: false },
+            { code: '300.03', name: 'Garanti Yapılandırma', type: 'Pasif', isHeader: false },
+            { code: '300.04', name: 'Enpara Kart Yapılandırma', type: 'Pasif', isHeader: false },
+            { code: '300.05', name: 'Enpara Hesap Yapılandırma', type: 'Pasif', isHeader: false },
+
+            { code: '600', name: 'GELİR HESAPLARI', type: 'Gelir', isHeader: true },
+            { code: '600.01', name: 'Hediye', type: 'Gelir', isHeader: false },
+
+            { code: '770', name: 'GİDER HESAPLARI', type: 'Gider', isHeader: true },
+            { code: '770.01', name: 'İaşe Giderleri', type: 'Gider', isHeader: false },
+            { code: '770.02', name: 'Makbul Giderleri', type: 'Gider', isHeader: false },
+            { code: '770.03', name: 'Temizlik Malzemeleri', type: 'Gider', isHeader: false },
+            { code: '770.04', name: 'Elektrik Giderleri', type: 'Gider', isHeader: false },
+            { code: '770.05', name: 'Su Giderleri', type: 'Gider', isHeader: false },
+            { code: '770.06', name: 'Doğalgaz Giderleri', type: 'Gider', isHeader: false },
+            { code: '770.07', name: 'İnternet Giderleri', type: 'Gider', isHeader: false },
+            { code: '770.08', name: 'Telefon Giderleri', type: 'Gider', isHeader: false },
+            { code: '770.09', name: 'Kira Gideri', type: 'Gider', isHeader: false },
+            { code: '770.10', name: 'Gezi Giderleri', type: 'Gider', isHeader: false },
+            { code: '770.11', name: 'Konya Ziyareti Giderleri', type: 'Gider', isHeader: false },
+            { code: '770.12', name: 'İstanbul Ziyareti Giderleri', type: 'Gider', isHeader: false },
+            { code: '770.13', name: 'Misafir Giderleri', type: 'Gider', isHeader: false },
+            { code: '770.14', name: 'Kitap Giderleri', type: 'Gider', isHeader: false },
+            { code: '770.15', name: 'Kış Hazırlığı', type: 'Gider', isHeader: false },
+            { code: '770.16', name: 'Çocuk Giderleri', type: 'Gider', isHeader: false },
+            { code: '770.17', name: 'Çocuk Bezi', type: 'Gider', isHeader: false },
+            { code: '770.18', name: 'Yakıt Giderleri', type: 'Gider', isHeader: false },
+            { code: '770.19', name: 'Araç Tadilat Tamirat', type: 'Gider', isHeader: false },
+            { code: '770.20', name: 'Araç Giderleri', type: 'Gider', isHeader: false },
+            { code: '770.21', name: 'Kaza Giderleri', type: 'Gider', isHeader: false },
+            { code: '770.22', name: 'Araç Mtv ödemesi', type: 'Gider', isHeader: false },
+            { code: '770.23', name: 'Araç Malzeme Alımı', type: 'Gider', isHeader: false },
+            { code: '770.24', name: 'Faiz Gideri', type: 'Gider', isHeader: false },
+            { code: '770.25', name: 'Kredi Kartı Ödemeleri', type: 'Gider', isHeader: false },
+            { code: '770.26', name: 'Yapılandırma Giderleri', type: 'Gider', isHeader: false },
+            { code: '770.27', name: 'Diğer Giderler', type: 'Gider', isHeader: false }
+        ];
+
+        const initialRawEntries = [
+            { date: "2026-08-21", debitAcc: "100.01", creditAcc: "600.01", amount: 6519.00, desc: "Başlangıç" },
+            { date: "2026-08-21", debitAcc: "770.19", creditAcc: "120.08", amount: 25000.00, desc: "conta" },
+            { date: "2026-08-21", debitAcc: "120.08", creditAcc: "102.02", amount: 10000.00, desc: "ödeme" },
+            { date: "2026-08-21", debitAcc: "770.19", creditAcc: "100.01", amount: 100.00, desc: "fan" },
+            { date: "2026-08-21", debitAcc: "770.19", creditAcc: "102.02", amount: 1000.00, desc: "mikser" },
+            { date: "2026-08-21", debitAcc: "770.19", creditAcc: "102.02", amount: 3500.00, desc: "gaz beyni" },
+            { date: "2026-08-21", debitAcc: "770.19", creditAcc: "102.02", amount: 2500.00, desc: "gaz filtresi" },
+            { date: "2026-08-21", debitAcc: "770.19", creditAcc: "100.01", amount: 200.00, desc: "kapı kilit" },
+            { date: "2026-09-01", debitAcc: "770.17", creditAcc: "100.01", amount: 549.00, desc: "6 no" },
+            { date: "2026-09-01", debitAcc: "120.08", creditAcc: "100.01", amount: 4075.00, desc: "et giderini ödeme" },
+            { date: "2026-09-01", debitAcc: "100.01", creditAcc: "600.01", amount: 4075.00, desc: "bozoğlu ödeme" },
+            { date: "2026-09-02", debitAcc: "770.01", creditAcc: "100.01", amount: 515.00, desc: "Genel İaşe Malzemesi" },
+            { date: "2026-09-02", debitAcc: "770.02", creditAcc: "100.01", amount: 369.00, desc: "Genel İaşe Malzemesi" },
+            { date: "2026-09-03", debitAcc: "770.20", creditAcc: "300.01", amount: 590.00, desc: "MTV" },
+            { date: "2026-09-04", debitAcc: "770.02", creditAcc: "100.01", amount: 368.00, desc: "çerez ve baharat" },
+            { date: "2026-09-05", debitAcc: "770.16", creditAcc: "100.01", amount: 290.00, desc: "civil alıştırma bezi" },
+            { date: "2026-09-05", debitAcc: "770.16", creditAcc: "100.01", amount: 200.00, desc: "ebebek oyuncak" },
+            { date: "2026-09-05", debitAcc: "770.01", creditAcc: "100.01", amount: 568.00, desc: "BİM" },
+            { date: "2026-09-11", debitAcc: "770.01", creditAcc: "100.01", amount: 105.00, desc: "İaşe" },
+            { date: "2026-09-11", debitAcc: "770.01", creditAcc: "100.01", amount: 95.00, desc: "İaşe" },
+            { date: "2026-09-11", debitAcc: "770.01", creditAcc: "100.01", amount: 89.00, desc: "İaşe" },
+            { date: "2026-09-11", debitAcc: "770.01", creditAcc: "100.01", amount: 200.00, desc: "yoğurt ve süt" },
+            { date: "2026-09-09", debitAcc: "100.01", creditAcc: "600.01", amount: 400.00, desc: "hediye" },
+            { date: "2026-09-10", debitAcc: "770.10", creditAcc: "100.01", amount: 1600.00, desc: "Çanakkale gezisi" },
+            { date: "2026-09-10", debitAcc: "770.10", creditAcc: "100.01", amount: 3000.00, desc: "seddülbahir Doğanay pansiyon" },
+            { date: "2026-09-10", debitAcc: "770.10", creditAcc: "300.01", amount: 1170.00, desc: "Çanakkale köprüsü" },
+            { date: "2026-09-10", debitAcc: "770.10", creditAcc: "102.01", amount: 710.00, desc: "Çanakkale vapur" },
+            { date: "2026-09-11", debitAcc: "770.10", creditAcc: "100.01", amount: 130.00, desc: "alçıtepe market" },
+            { date: "2026-09-10", debitAcc: "770.10", creditAcc: "100.01", amount: 480.00, desc: "a101 market" },
+            { date: "2026-09-14", debitAcc: "770.21", creditAcc: "102.02", amount: 8000.00, desc: "karşı taraf kaza ödemesi" },
+            { date: "2026-09-11", debitAcc: "770.20", creditAcc: "300.01", amount: 250.00, desc: "lamba ve bantlama" },
+            { date: "2026-09-22", debitAcc: "120.12", creditAcc: "102.01", amount: 15900.00, desc: "Parça Maliyeti" },
+            { date: "2026-09-11", debitAcc: "770.10", creditAcc: "300.01", amount: 645.00, desc: "müze girişleri" },
+            { date: "2026-09-16", debitAcc: "770.16", creditAcc: "300.01", amount: 1099.99, desc: "24 numara bot" },
+            { date: "2026-09-18", debitAcc: "770.15", creditAcc: "100.01", amount: 957.00, desc: "sebze alımı" },
+            { date: "2026-09-22", debitAcc: "770.21", creditAcc: "120.12", amount: 29000.00, desc: "İşçilik Giderleri" },
+            { date: "2026-09-21", debitAcc: "770.16", creditAcc: "300.01", amount: 619.98, desc: "Mont Alımı" },
+            { date: "2026-09-21", debitAcc: "770.16", creditAcc: "300.01", amount: 556.29, desc: "Lazımlık Alımı" },
+            { date: "2026-09-18", debitAcc: "770.01", creditAcc: "100.01", amount: 200.00, desc: "Süt Alımı" },
+            { date: "2026-09-20", debitAcc: "770.18", creditAcc: "100.01", amount: 800.00, desc: "Keles" },
+            { date: "2026-09-20", debitAcc: "770.10", creditAcc: "100.01", amount: 300.00, desc: "İaşe Alımı" },
+            { date: "2026-09-09", debitAcc: "100.01", creditAcc: "600.01", amount: 7000.00, desc: "hediye" },
+            { date: "2026-09-23", debitAcc: "120.03", creditAcc: "300.01", amount: 3681.27, desc: "ocak MTV" },
+            { date: "2026-08-08", debitAcc: "770.17", creditAcc: "102.01", amount: 964.00, desc: "bez" },
+            { date: "2026-08-10", debitAcc: "770.18", creditAcc: "300.01", amount: 775.00, desc: "yakıt" },
+            { date: "2026-08-18", debitAcc: "770.07", creditAcc: "300.01", amount: 420.00, desc: "eski modem iade" },
+            { date: "2026-09-02", debitAcc: "770.22", creditAcc: "300.01", amount: 613.81, desc: "temmuz" },
+            { date: "2026-08-22", debitAcc: "770.23", creditAcc: "300.01", amount: 3000.00, desc: "şu kaçak sensörü" },
+            { date: "2026-09-02", debitAcc: "770.24", creditAcc: "102.01", amount: 760.00, desc: "gecikme faizi" },
+            { date: "2026-08-30", debitAcc: "770.01", creditAcc: "300.01", amount: 3026.23, desc: "genel" },
+            { date: "2026-09-23", debitAcc: "770.01", creditAcc: "100.01", amount: 110.87, desc: "Meyve Alımı" },
+            { date: "2026-09-22", debitAcc: "770.01", creditAcc: "300.01", amount: 145.00, desc: "Meyve Alımı" },
+            { date: "2026-09-21", debitAcc: "100.01", creditAcc: "600.01", amount: 600.00, desc: "hediye" },
+            { date: "2026-09-25", debitAcc: "120.02", creditAcc: "102.01", amount: 2000.00, desc: "Faturalar için ödeme" },
+            { date: "2026-09-25", debitAcc: "770.04", creditAcc: "120.02", amount: 382.52, desc: "elektrik faturası" },
+            { date: "2026-09-24", debitAcc: "120.03", creditAcc: "102.01", amount: 3700.00, desc: "Babam MTV ödemesi" },
+            { date: "2026-09-20", debitAcc: "770.02", creditAcc: "300.01", amount: 188.70, desc: "adaçayı" },
+            { date: "2026-09-20", debitAcc: "770.01", creditAcc: "300.01", amount: 161.30, desc: "Keles İaşe Alımı" },
+            { date: "2026-09-06", debitAcc: "770.18", creditAcc: "100.01", amount: 650.00, desc: "yakıt" },
+            { date: "2026-09-25", debitAcc: "770.01", creditAcc: "300.01", amount: 1588.47, desc: "Düzeltme" },
+            { date: "2026-09-25", debitAcc: "770.25", creditAcc: "102.01", amount: 9808.87, desc: "Düzeltme" },
+            { date: "2026-09-20", debitAcc: "770.09", creditAcc: "102.02", amount: 22000.00, desc: "Eylul Kirasi" },
+            { date: "2026-09-14", debitAcc: "300.03", creditAcc: "102.02", amount: 11300.00, desc: "Taksit Ödemesi" },
+            { date: "2026-09-14", debitAcc: "300.04", creditAcc: "102.02", amount: 2420.00, desc: "Taksit Ödemesi" },
+            { date: "2026-08-01", debitAcc: "120.05", creditAcc: "300.02", amount: 10000.00, desc: "Reklam İns" },
+            { date: "2026-09-19", debitAcc: "120.05", creditAcc: "300.02", amount: 10000.00, desc: "Reklam İns" },
+            { date: "2026-09-17", debitAcc: "102.02", creditAcc: "600.01", amount: 7000.00, desc: "hediye" },
+            { date: "2026-09-05", debitAcc: "102.02", creditAcc: "600.01", amount: 9600.00, desc: "hediye" },
+            { date: "2026-09-04", debitAcc: "102.02", creditAcc: "600.01", amount: 11900.00, desc: "hediye" },
+            { date: "2026-09-02", debitAcc: "300.03", creditAcc: "102.02", amount: 14000.00, desc: "ödeme" },
+            { date: "2026-09-02", debitAcc: "770.25", creditAcc: "102.02", amount: 750.00, desc: "ödeme" },
+            { date: "2026-09-02", debitAcc: "770.25", creditAcc: "102.02", amount: 11400.00, desc: "ödeme" },
+            { date: "2026-08-31", debitAcc: "770.24", creditAcc: "102.02", amount: 2653.40, desc: "ödeme" },
+            { date: "2026-08-16", debitAcc: "300.04", creditAcc: "102.02", amount: 2400.00, desc: "taksit ödeme" },
+            { date: "2026-08-15", debitAcc: "770.09", creditAcc: "102.02", amount: 22000.00, desc: "kira" },
+            { date: "2026-08-13", debitAcc: "300.03", creditAcc: "102.02", amount: 11100.00, desc: "taksit ödeme" },
+            { date: "2026-08-01", debitAcc: "770.25", creditAcc: "102.02", amount: 15936.61, desc: "taksit ödeme" },
+            { date: "2026-02-11", debitAcc: "770.26", creditAcc: "300.03", amount: 271279.44, desc: "Garanti Yapılandırma" },
+            { date: "2026-08-01", debitAcc: "300.03", creditAcc: "770.26", amount: 42723.19, desc: "Yapılandırma Giderleri" },
+            { date: "2026-04-01", debitAcc: "770.26", creditAcc: "300.04", amount: 22482.83, desc: "yapılandırma" },
+            { date: "2026-04-02", debitAcc: "300.04", creditAcc: "770.26", amount: 3148.53, desc: "ödeme" },
+            { date: "2026-09-27", debitAcc: "770.17", creditAcc: "100.01", amount: 209.00, desc: "çocuk bezi" },
+            { date: "2026-09-27", debitAcc: "770.01", creditAcc: "100.01", amount: 761.00, desc: "bim genel ihtiyaç alımı" },
+            { date: "2026-09-27", debitAcc: "770.01", creditAcc: "100.01", amount: 270.00, desc: "furpa mantar ve meyve" },
+            { date: "2026-09-27", debitAcc: "100.01", creditAcc: "600.01", amount: 2000.00, desc: "Hediye" },
+            { date: "2026-09-28", debitAcc: "770.01", creditAcc: "100.01", amount: 110.00, desc: "patates" },
+            { date: "2026-09-28", debitAcc: "770.27", creditAcc: "100.01", amount: 859.00, desc: "Diğer Giderler" },
+            { date: "2026-09-29", debitAcc: "120.05", creditAcc: "300.02", amount: 7703.60, desc: "abaküs" },
+            { date: "2026-09-29", debitAcc: "770.01", creditAcc: "100.01", amount: 148.00, desc: "kavun" },
+            { date: "2026-09-29", debitAcc: "100.01", creditAcc: "600.01", amount: 150.00, desc: "Hediye" }
+        ];
+
+        let processedTransactions = [];
+        initialRawEntries.forEach((e, idx) => {
+            processedTransactions.push({
+                id: idx + 1,
+                type: 'Çift Taraflı',
+                amount: e.amount,
+                code: e.debitAcc,
+                wallet: e.creditAcc,
+                date: e.date,
+                desc: e.desc,
+                receipt: null
+            });
+        });
+
+        let db = JSON.parse(localStorage.getItem('EvDefteriTamGuncelDB_V3')) || {
+            currentUser: null,
+            chartOfAccounts: initialChartOfAccounts,
+            wallets: [
+                { id: 1, name: '100.01 - Nakit Kasa', type: 'Kasa', balance: 4584 },
+                { id: 2, name: '102.01 - Yapı Kredi Bankası', type: 'Banka', balance: 30310 },
+                { id: 3, name: '102.02 - Akbank', type: 'Banka', balance: 83098.88 }
+            ],
+            transactions: processedTransactions,
+            bills: [
+                { id: 1, name: 'Elektrik Faturası', code: '770.04', amount: 450.00, dueDate: '2026-10-15', paid: false },
+                { id: 2, name: 'Su Faturası', code: '770.05', amount: 210.00, dueDate: '2026-10-18', paid: false }
+            ],
+            budgets: {
+                '770.01': 10000,
+                '770.09': 25000
+            },
+            documents: []
+        };
+
+        function saveDB() {
+            localStorage.setItem('EvDefteriTamGuncelDB_V3', JSON.stringify(db));
+        }
+
+        function handleLogin(e) {
+            e.preventDefault();
+            const user = document.getElementById('loginUser').value.trim().toLowerCase();
+            const pass = document.getElementById('loginPass').value.trim();
+
+            if ((user === 'admin' || user === 'aile') && pass === '1234') {
+                db.currentUser = user;
+                saveDB();
+                initApp();
+            } else {
+                const err = document.getElementById('loginError');
+                err.textContent = 'Kullanıcı adı veya şifre hatalı! (admin / 1234 veya aile / 1234)';
+                err.classList.remove('hidden');
+            }
+        }
+
+        function handleLogout() {
+            db.currentUser = null;
+            saveDB();
+            document.getElementById('appSection').classList.add('hidden');
+            document.getElementById('loginSection').classList.remove('hidden');
+            document.getElementById('loginForm').reset();
+        }
+
+        function initApp() {
+            if (!db.currentUser) {
+                document.getElementById('loginSection').classList.remove('hidden');
+                document.getElementById('appSection').classList.add('hidden');
+                return;
+            }
+            document.getElementById('loginSection').classList.add('hidden');
+            document.getElementById('appSection').classList.remove('hidden');
+            document.getElementById('currentUserDisplay').innerHTML = `<i class="fa-solid fa-user-check mr-1 text-indigo-600"></i> ${db.currentUser.toUpperCase()}`;
+            
+            // Eğer aile kullanıcısı ise form ekleme kartlarını gizle (Salt Okunur Mod)
+            if (db.currentUser === 'aile') {
+                const formsToHide = ['accountFormCard', 'walletFormCard', 'txFormCard', 'billFormCard', 'budgetFormCard'];
+                formsToHide.forEach(id => {
+                    let el = document.getElementById(id);
+                    if (el) el.classList.add('hidden');
+                });
+            }
+
+            document.getElementById('tDate').valueAsDate = new Date();
+            renderAll();
+        }
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.tab-btn').forEach(el => {
+                el.classList.remove('bg-indigo-600', 'text-white', 'shadow-sm');
+                el.classList.add('bg-white', 'text-gray-600', 'hover:bg-gray-100');
+            });
+
+            document.getElementById('tab-' + tabId).classList.remove('hidden');
+            const btn = document.getElementById('btn-' + tabId);
+            btn.classList.remove('bg-white', 'text-gray-600', 'hover:bg-gray-100');
+            btn.classList.add('bg-indigo-600', 'text-white', 'shadow-sm');
+        }
+
+        function renderAll() {
+            renderDashboard();
+            renderChartOfAccounts();
+            renderWallets();
+            renderTransactions();
+            renderDocuments();
+            renderTrialBalance();
+            renderBills();
+            renderDebts();
+            renderBudgets();
+        }
+
+        // 1. DASHBOARD
+        function renderDashboard() {
+            let period = document.getElementById('dashboardPeriodSelect') ? document.getElementById('dashboardPeriodSelect').value : 'current_month';
+            
+            let filteredTxs = db.transactions;
+            if (period === 'current_month' || period === '2026-09') {
+                filteredTxs = db.transactions.filter(t => t.date.startsWith('2026-09'));
+            } else if (period === '2026-08') {
+                filteredTxs = db.transactions.filter(t => t.date.startsWith('2026-08'));
+            }
+
+            let totalAssets = db.wallets.reduce((sum, w) => sum + Number(w.balance), 0);
+            let monthlyIncome = filteredTxs.filter(t => t.code === '600.01' || t.wallet === '600.01').reduce((sum, t) => sum + Number(t.amount), 0);
+            let monthlyExpense = filteredTxs.filter(t => t.code.startsWith('770')).reduce((sum, t) => sum + Number(t.amount), 0);
+            let pendingBills = db.bills.filter(b => !b.paid).length;
+
+            document.getElementById('statTotalAssets').textContent = '₺' + totalAssets.toLocaleString('tr-TR', {minimumFractionDigits: 2});
+            document.getElementById('statMonthlyIncome').textContent = '₺' + monthlyIncome.toLocaleString('tr-TR', {minimumFractionDigits: 2});
+            document.getElementById('statMonthlyExpense').textContent = '₺' + monthlyExpense.toLocaleString('tr-TR', {minimumFractionDigits: 2});
+            document.getElementById('statPendingBills').textContent = pendingBills + ' Adet';
+
+            let recentHTML = '';
+            filteredTxs.slice(-5).reverse().forEach(t => {
+                let creditObj = db.chartOfAccounts.find(a => a.code === t.wallet);
+                recentHTML += `
+                    <tr>
+                        <td class="px-3 py-2.5 text-gray-500">${t.date}</td>
+                        <td class="px-3 py-2.5 font-medium text-gray-800">${creditObj ? creditObj.name : t.wallet}</td>
+                        <td class="px-3 py-2.5 text-gray-600">${t.desc}</td>
+                        <td class="px-3 py-2.5 text-right font-bold text-red-600">-₺${Number(t.amount).toLocaleString('tr-TR', {minimumFractionDigits: 2})}</td>
+                    </tr>
+                `;
+            });
+            document.getElementById('recentTransactionsTable').innerHTML = recentHTML || '<tr><td colspan="4" class="text-center py-4 text-gray-400">Kayıt yok.</td></tr>';
+            renderBudgets();
+        }
+
+        // 2. HESAP PLANI & KOD/İSİM SENKRONİZASYONU
+        function saveAccountCode(e) {
+            e.preventDefault();
+            if (db.currentUser === 'aile') return alert('Yetkiniz yok!');
+            const code = document.getElementById('newAccCode').value.trim();
+            const name = document.getElementById('newAccName').value.trim();
+            const type = document.getElementById('newAccType').value;
+            const originalCode = document.getElementById('editOriginalCode').value;
+            const isHeader = !code.includes('.');
+
+            if (originalCode) {
+                let acc = db.chartOfAccounts.find(a => a.code === originalCode);
+                if (acc) {
+                    let oldCode = acc.code;
+                    acc.code = code; 
+                    acc.name = name; 
+                    acc.type = type; 
+                    acc.isHeader = isHeader;
+
+                    // Kod veya isim değiştiğinde tüm hareketlerde ve borçlarda güncelle
+                    db.transactions.forEach(t => {
+                        if (t.code === oldCode) t.code = code;
+                        if (t.wallet === oldCode) t.wallet = code;
+                    });
+                }
+            } else {
+                if (db.chartOfAccounts.some(a => a.code === code)) {
+                    alert('Bu hesap kodu zaten kayıtlı!');
+                    return;
+                }
+                // Otomatik başlık kontrolü: örn 100.01 eklendiyse ve 100 yoksa ekle
+                let prefix = code.split('.')[0];
+                if (!db.chartOfAccounts.some(a => a.code === prefix)) {
+                    db.chartOfAccounts.push({ code: prefix, name: name.toUpperCase() + ' ANA BAŞLIĞI', type, isHeader: true });
+                }
+                db.chartOfAccounts.push({ code, name, type, isHeader });
+            }
+
+            db.chartOfAccounts.sort((a, b) => a.code.localeCompare(b.code, 'tr', { numeric: true }));
+            saveDB();
+            renderAll();
+            resetAccountForm();
+            alert('Hesap başarıyla güncellendi ve sistemle senkronize edildi!');
+        }
+
+        function editAccountCode(code) {
+            if (db.currentUser === 'aile') return alert('Yetkiniz yok!');
+            let acc = db.chartOfAccounts.find(a => a.code === code);
+            if (!acc) return;
+            document.getElementById('editOriginalCode').value = acc.code;
+            document.getElementById('newAccCode').value = acc.code;
+            document.getElementById('newAccName').value = acc.name;
+            document.getElementById('newAccType').value = acc.type;
+
+            document.getElementById('accountFormTitle').textContent = 'Hesap Düzenle';
+            document.getElementById('accountSubmitBtn').textContent = 'Güncelle';
+            document.getElementById('accountCancelBtn').classList.remove('hidden');
+        }
+
+        function resetAccountForm() {
+            document.getElementById('editOriginalCode').value = '';
+            document.getElementById('newAccCode').value = '';
+            document.getElementById('newAccName').value = '';
+            document.getElementById('accountFormTitle').textContent = 'Yeni Hesap Ekle';
+            document.getElementById('accountSubmitBtn').textContent = 'Kaydet';
+            document.getElementById('accountCancelBtn').classList.add('hidden');
+        }
+
+        function deleteAccountCode(code) {
+            if (db.currentUser === 'aile') return alert('Yetkiniz yok!');
+            if (confirm('Bu hesabı silmek istiyor musunuz?')) {
+                db.chartOfAccounts = db.chartOfAccounts.filter(a => a.code !== code);
+                saveDB();
+                renderAll();
+            }
+        }
+
+        function renderChartOfAccounts() {
+            db.chartOfAccounts.sort((a, b) => a.code.localeCompare(b.code, 'tr', { numeric: true }));
+            const searchQuery = document.getElementById('accountSearchInput') ? document.getElementById('accountSearchInput').value.toLowerCase() : '';
+            
+            let totals = {};
+            db.chartOfAccounts.forEach(acc => { totals[acc.code] = { debit: 0, credit: 0 }; });
+
+            db.transactions.forEach(t => {
+                if (!totals[t.code]) totals[t.code] = { debit: 0, credit: 0 };
+                totals[t.code].debit += Number(t.amount);
+
+                if (!totals[t.wallet]) totals[t.wallet] = { debit: 0, credit: 0 };
+                totals[t.wallet].credit += Number(t.amount);
+            });
+
+            let html = '';
+            db.chartOfAccounts.forEach(acc => {
+                if (searchQuery && !acc.code.toLowerCase().includes(searchQuery) && !acc.name.toLowerCase().includes(searchQuery)) {
+                    return;
+                }
+
+                let debit = totals[acc.code] ? totals[acc.code].debit : 0;
+                let credit = totals[acc.code] ? totals[acc.code].credit : 0;
+                let balance = debit - credit;
+
+                if (acc.isHeader) {
+                    html += `
+                        <tr class="bg-indigo-50/80 font-bold text-indigo-950">
+                            <td class="px-3 py-3 font-mono text-indigo-700">${acc.code}</td>
+                            <td class="px-3 py-3 uppercase tracking-wider">${acc.name}</td>
+                            <td class="px-3 py-3"><span class="bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded text-xs">${acc.type}</span></td>
+                            <td class="px-3 py-3 text-right">-</td>
+                            <td class="px-3 py-3 text-right">-</td>
+                            <td class="px-3 py-3 text-right">-</td>
+                            <td class="px-3 py-3 text-center space-x-2">
+                                ${db.currentUser !== 'aile' ? `
+                                    <button onclick="editAccountCode('${acc.code}')" class="text-indigo-600 hover:text-indigo-800 text-xs"><i class="fa-solid fa-pen"></i></button>
+                                    <button onclick="deleteAccountCode('${acc.code}')" class="text-red-500 hover:text-red-700 text-xs"><i class="fa-solid fa-trash"></i></button>
+                                ` : '-'}
+                            </td>
+                        </tr>
+                    `;
+                } else {
+                    // Renklendirme Kuralı: Gelir hesap bakiyeleri yeşil, Gider bakiyeleri ve ters bakiye verenler kırmızı
+                    let balanceColor = 'text-gray-900';
+                    let balanceType = balance >= 0 ? '(B)' : '(A)';
+
+                    if (acc.type === 'Gelir') {
+                        balanceColor = 'text-emerald-600 font-bold';
+                    } else if (acc.type === 'Gider' || balance < 0 || (acc.type === 'Pasif' && credit - debit < 0)) {
+                        balanceColor = 'text-red-600 font-bold';
+                    }
+
+                    html += `
+                        <tr class="hover:bg-gray-50 border-b border-gray-100">
+                            <td class="px-3 py-2.5 font-mono text-gray-600 pl-6"><i class="fa-solid fa-arrow-turn-down text-gray-300 mr-2 text-xs"></i>${acc.code}</td>
+                            <td class="px-3 py-2.5 text-gray-800 font-medium">${acc.name}</td>
+                            <td class="px-3 py-2.5"><span class="bg-gray-100 text-gray-600 px-2 py-0.5 rounded text-xs">${acc.type}</span></td>
+                            <td class="px-3 py-2.5 text-right font-semibold text-gray-700">₺${debit.toLocaleString('tr-TR', {minimumFractionDigits: 2})}</td>
+                            <td class="px-3 py-2.5 text-right font-semibold text-gray-700">₺${credit.toLocaleString('tr-TR', {minimumFractionDigits: 2})}</td>
+                            <td class="px-3 py-2.5 text-right font-bold ${balanceColor}">₺${Math.abs(balance).toLocaleString('tr-TR', {minimumFractionDigits: 2})} ${balanceType}</td>
+                            <td class="px-3 py-2.5 text-center space-x-2">
+                                <button onclick="viewAccountStatement('${acc.code}')" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-2 py-1 rounded text-xs font-semibold mr-1"><i class="fa-solid fa-file-lines"></i> Ekstre</button>
+                                ${db.currentUser !== 'aile' ? `
+                                    <button onclick="editAccountCode('${acc.code}')" class="text-indigo-600 hover:text-indigo-800 text-xs"><i class="fa-solid fa-pen"></i></button>
+                                    <button onclick="deleteAccountCode('${acc.code}')" class="text-red-500 hover:text-red-700 text-xs"><i class="fa-solid fa-trash"></i></button>
+                                ` : ''}
+                            </td>
+                        </tr>
+                    `;
+                }
+            });
+            document.getElementById('chartOfAccountsTable').innerHTML = html || '<tr><td colspan="7" class="text-center py-4 text-gray-400">Aramanıza uygun hesap bulunamadı.</td></tr>';
+        }
+
+        // Muavin Defteri Ekstre (Her satırda bakiye)
+        function viewAccountStatement(code) {
+            let acc = db.chartOfAccounts.find(a => a.code === code);
+            if (!acc) return;
+
+            document.getElementById('statementTitle').textContent = `${acc.code} - ${acc.name} Muavin Defteri`;
+            document.getElementById('accountStatementSection').classList.remove('hidden');
+
+            let statementHTML = '';
+            let matchedTxs = db.transactions.filter(t => t.code === code || t.wallet === code);
+            matchedTxs.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+            let runningBalance = 0;
+
+            if (matchedTxs.length === 0) {
+                statementHTML = `<tr><td colspan="5" class="text-center py-4 text-gray-400">Bu hesaba ait işlem hareketi bulunmamaktadır.</td></tr>`;
+            } else {
+                matchedTxs.forEach(t => {
+                    let isDebit = t.code === code;
+                    let debitVal = isDebit ? Number(t.amount) : 0;
+                    let creditVal = !isDebit ? Number(t.amount) : 0;
+
+                    // Muavin bakiye hesabı
+                    if (acc.type === 'Aktif' || acc.type === 'Gider') {
+                        runningBalance += (debitVal - creditVal);
+                    } else {
+                        runningBalance += (creditVal - debitVal);
+                    }
+
+                    let balColor = runningBalance >= 0 ? 'text-gray-900' : 'text-red-600 font-bold';
+
+                    statementHTML += `
+                        <tr>
+                            <td class="px-3 py-2.5 text-gray-500">${t.date}</td>
+                            <td class="px-3 py-2.5 text-gray-800">${t.desc} <span class="text-xs text-gray-400">(Karşı: ${isDebit ? t.wallet : t.code})</span></td>
+                            <td class="px-3 py-2.5 text-right font-semibold text-gray-700">${debitVal > 0 ? '₺' + debitVal.toLocaleString('tr-TR', {minimumFractionDigits: 2}) : '-'}</td>
+                            <td class="px-3 py-2.5 text-right font-semibold text-gray-700">${creditVal > 0 ? '₺' + creditVal.toLocaleString('tr-TR', {minimumFractionDigits: 2}) : '-'}</td>
+                            <td class="px-3 py-2.5 text-right font-bold ${balColor}">₺${Math.abs(runningBalance).toLocaleString('tr-TR', {minimumFractionDigits: 2})} ${runningBalance >= 0 ? '(B)' : '(A)'}</td>
+                        </tr>
+                    `;
+                });
+            }
+
+            document.getElementById('accountStatementTable').innerHTML = statementHTML;
+            document.getElementById('accountStatementSection').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function closeStatement() {
+            document.getElementById('accountStatementSection').classList.add('hidden');
+        }
+
+        // 3. KASA & BANKALAR (İsimlerle birlikte)
+        function addWallet(e) {
+            e.preventDefault();
+            if (db.currentUser === 'aile') return alert('Yetkiniz yok!');
+            const name = document.getElementById('walletName').value;
+            const type = document.getElementById('walletType').value;
+            const balance = parseFloat(document.getElementById('walletBalance').value);
+
+            db.wallets.push({ id: Date.now(), name, type, balance });
+            saveDB();
+            renderAll();
+            e.target.reset();
+            alert('Kasa / Banka hesabı eklendi!');
+        }
+
+        function renderWallets() {
+            let html = '';
+            db.wallets.forEach(w => {
+                html += `
+                    <div class="bg-gray-50 border p-4 rounded-xl flex justify-between items-center">
+                        <div>
+                            <span class="text-xs font-semibold text-indigo-600 uppercase">${w.type}</span>
+                            <h4 class="text-base font-bold text-gray-800">${w.name}</h4>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-lg font-extrabold text-emerald-600">₺${w.balance.toLocaleString('tr-TR', {minimumFractionDigits: 2})}</p>
+                        </div>
+                    </div>
+                `;
+            });
+            document.getElementById('walletsGrid').innerHTML = html;
+
+            let selectHTML = '';
+            db.chartOfAccounts.filter(a => !a.isHeader).forEach(a => { selectHTML += `<option value="${a.code}">${a.code} - ${a.name}</option>`; });
+            if(document.getElementById('tCreditCode')) document.getElementById('tCreditCode').innerHTML = selectHTML;
+            if(document.getElementById('tDebitCode')) document.getElementById('tDebitCode').innerHTML = selectHTML;
+            if(document.getElementById('billAccCode')) document.getElementById('billAccCode').innerHTML = db.chartOfAccounts.filter(a => !a.isHeader && a.type === 'Gider').map(a => `<option value="${a.code}">${a.code} - ${a.name}</option>`).join('');
+        }
+
+        // 4. FİŞ & İŞLEMLER & KAMERAYA OKUT (AI) & BELGELER
+        function simulateAICameraScan() {
+            if (db.currentUser === 'aile') return alert('Yetkiniz yok!');
+            // Yapay zeka fiş okuma simülasyonu
+            const sampleFişler = [
+                { desc: 'AI Tarama: Market İaşe Alımı', amount: 485.50, debit: '770.01', credit: '100.01' },
+                { desc: 'AI Tarama: Akaryakıt İstasyonu', amount: 1250.00, debit: '770.18', credit: '300.01' },
+                { desc: 'AI Tarama: Eczane Çocuk İlacı', amount: 310.25, debit: '770.16', credit: '100.01' }
+            ];
+            let randomFiş = sampleFişler[Math.floor(Math.random() * sampleFişler.length)];
+
+            document.getElementById('tAmount').value = randomFiş.amount;
+            document.getElementById('tDebitCode').value = randomFiş.debit;
+            document.getElementById('tCreditCode').value = randomFiş.credit;
+            document.getElementById('tDesc').value = randomFiş.desc;
+            document.getElementById('tType').value = 'Gider';
+
+            alert(`📷 Kamera taraması başarılı!\n\nYapay Zeka Fişi Okudu:\n- Açıklama: ${randomFiş.desc}\n- Tutar: ₺${randomFiş.amount}\n- Gider Kodu: ${randomFiş.debit}\n- Ödeme: ${randomFiş.credit}\n\nLütfen "İşlemi Kaydet" butonuna basarak onaylayın.`);
+        }
+
+        function saveTransaction(e) {
+            e.preventDefault();
+            if (db.currentUser === 'aile') return alert('Yetkiniz yok!');
+            const editId = document.getElementById('editTxId').value;
+            const type = document.getElementById('tType').value;
+            const amount = parseFloat(document.getElementById('tAmount').value);
+            const code = document.getElementById('tDebitCode').value;
+            const wallet = document.getElementById('tCreditCode').value;
+            const date = document.getElementById('tDate').value;
+            const desc = document.getElementById('tDesc').value;
+            const receiptFile = document.getElementById('tReceipt').files[0];
+
+            const processSave = (receiptData) => {
+                let newTxId = editId ? Number(editId) : Date.now();
+                let txObj = {
+                    id: newTxId, type, amount, code, wallet, date, desc,
+                    receipt: receiptData || (editId ? db.transactions.find(t => t.id == editId).receipt : null)
+                };
+
+                if (editId) {
+                    let idx = db.transactions.findIndex(t => t.id == editId);
+                    if (idx !== -1) db.transactions[idx] = txObj;
+                } else {
+                    db.transactions.push(txObj);
+                }
+
+                // Eğer fiş görseli varsa Belgeler sekmesine ekle
+                if (receiptData) {
+                    db.documents.push({
+                        id: newTxId,
+                        date,
+                        desc,
+                        amount,
+                        image: receiptData
+                    });
+                }
+
+                saveDB();
+                renderAll();
+                resetTxForm();
+                alert('İşlem başarıyla kaydedildi ve belgelere arşivlendi!');
+            };
+
+            if (receiptFile) {
+                const reader = new FileReader();
+                reader.onload = function(ev) { processSave(ev.target.result); };
+                reader.readAsDataURL(receiptFile);
+            } else {
+                processSave(null);
+            }
+        }
+
+        function editTransaction(id) {
+            if (db.currentUser === 'aile') return alert('Yetkiniz yok!');
+            let tx = db.transactions.find(t => t.id === id);
+            if (!tx) return;
+            document.getElementById('editTxId').value = tx.id;
+            document.getElementById('tType').value = tx.type;
+            document.getElementById('tAmount').value = tx.amount;
+            document.getElementById('tDebitCode').value = tx.code;
+            document.getElementById('tCreditCode').value = tx.wallet;
+            document.getElementById('tDate').value = tx.date;
+            document.getElementById('tDesc').value = tx.desc;
+
+            document.getElementById('txFormTitle').textContent = 'Fiş / İşlem Düzenle';
+            document.getElementById('txSubmitBtn').textContent = 'Değişiklikleri Güncelle';
+            document.getElementById('txCancelBtn').classList.remove('hidden');
+        }
+
+        function resetTxForm() {
+            document.getElementById('editTxId').value = '';
+            document.getElementById('tAmount').value = '';
+            document.getElementById('tDesc').value = '';
+            document.getElementById('tReceipt').value = '';
+            document.getElementById('tDate').valueAsDate = new Date();
+            document.getElementById('txFormTitle').textContent = 'Merkezi Fiş ve İşlem Girişi / Düzenleme';
+            document.getElementById('txSubmitBtn').textContent = 'İşlemi Kaydet';
+            document.getElementById('txCancelBtn').classList.add('hidden');
+        }
+
+        function deleteTransaction(id) {
+            if (db.currentUser === 'aile') return alert('Yetkiniz yok!');
+            if (!confirm('İşlemi silmek istiyor musunuz?')) return;
+            db.transactions = db.transactions.filter(t => t.id !== id);
+            db.documents = db.documents.filter(d => d.id !== id);
+            saveDB();
+            renderAll();
+        }
+
+        function renderTransactions() {
+            let html = '';
+            db.transactions.slice().reverse().forEach(t => {
+                let debitAccObj = db.chartOfAccounts.find(a => a.code === t.code);
+                let creditAccObj = db.chartOfAccounts.find(a => a.code === t.wallet);
+                html += `
+                    <tr>
+                        <td class="px-3 py-2.5 text-gray-500">${t.date}</td>
+                        <td class="px-3 py-2.5"><span class="px-2 py-1 rounded text-xs font-semibold bg-indigo-100 text-indigo-700">Çift Taraflı</span></td>
+                        <td class="px-3 py-2.5 text-xs font-medium">
+                            <span class="text-indigo-600 font-bold">(B) ${t.code}</span> - ${debitAccObj ? debitAccObj.name : ''} <br>
+                            <span class="text-emerald-600 font-bold">(A) ${t.wallet}</span> - ${creditAccObj ? creditAccObj.name : ''}
+                        </td>
+                        <td class="px-3 py-2.5 text-gray-600">${t.desc}</td>
+                        <td class="px-3 py-2.5">
+                            ${t.receipt ? `<button onclick="showReceipt('${t.receipt}')" class="text-indigo-600 hover:underline text-xs"><i class="fa-solid fa-image"></i> Görüntüle</button>` : '<span class="text-gray-300 text-xs">Yok</span>'}
+                        </td>
+                        <td class="px-3 py-2.5 text-right font-bold text-gray-900">₺${Number(t.amount).toLocaleString('tr-TR', {minimumFractionDigits: 2})}</td>
+                        <td class="px-3 py-2.5 text-center space-x-2">
+                            ${db.currentUser !== 'aile' ? `
+                                <button onclick="editTransaction(${t.id})" class="text-indigo-600 hover:text-indigo-800 text-xs"><i class="fa-solid fa-pen"></i></button>
+                                <button onclick="deleteTransaction(${t.id})" class="text-red-500 hover:text-red-700 text-xs"><i class="fa-solid fa-trash"></i></button>
+                            ` : '-'}
+                        </td>
+                    </tr>
+                `;
+            });
+            document.getElementById('allTransactionsTable').innerHTML = html || '<tr><td colspan="7" class="text-center py-4 text-gray-400">Kayıt yok.</td></tr>';
+        }
+
+        // 5. BELGELER ARŞİVİ
+        function renderDocuments() {
+            let html = '';
+            // Örnek dokümanlar veya eklenenler
+            let docs = db.documents;
+            if (docs.length === 0) {
+                html = `<div class="col-span-3 text-center py-8 text-gray-400"><i class="fa-solid fa-folder-open text-4xl mb-2 text-gray-300"></i><p>Henüz arşivlenmiş belge veya fiş görseli bulunmuyor.</p></div>`;
+            } else {
+                docs.forEach(d => {
+                    html += `
+                        <div class="bg-gray-50 border rounded-xl p-4 space-y-3 shadow-sm">
+                            <div class="flex justify-between items-center text-xs text-gray-500">
+                                <span><i class="fa-regular fa-calendar mr-1"></i> ${d.date}</span>
+                                <span class="font-bold text-gray-900">₺${Number(d.amount).toLocaleString('tr-TR', {minimumFractionDigits: 2})}</span>
+                            </div>
+                            <p class="text-sm font-semibold text-gray-800">${d.desc}</p>
+                            <div class="flex justify-center">
+                                <img src="${d.image}" onclick="showReceipt('${d.image}')" class="h-36 object-cover rounded-lg border cursor-pointer hover:opacity-90 transition shadow" alt="Belge">
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+            document.getElementById('documentsGrid').innerHTML = html;
+        }
+
+        function showReceipt(imgSrc) {
+            document.getElementById('modalReceiptImg').src = imgSrc;
+            document.getElementById('receiptModal').classList.remove('hidden');
+        }
+        function closeReceiptModal() { document.getElementById('receiptModal').classList.add('hidden'); }
+
+        // 6. MİZAN (Dönem ve Tarih Aralığı Seçenekli)
+        function renderTrialBalance() {
+            let period = document.getElementById('mizanPeriod').value;
+            let customBox = document.getElementById('customDateRangeBox');
+            if (period === 'custom') {
+                customBox.classList.remove('hidden');
+            } else {
+                customBox.classList.add('hidden');
+            }
+
+            db.chartOfAccounts.sort((a, b) => a.code.localeCompare(b.code, 'tr', { numeric: true }));
+            
+            let mizanMap = {};
+            db.chartOfAccounts.forEach(acc => {
+                mizanMap[acc.code] = { code: acc.code, name: acc.name, type: acc.type, isHeader: acc.isHeader, debit: 0, credit: 0 };
+            });
+
+            // Filtreleme
+            let filteredTxs = db.transactions;
+            if (period !== 'all' && period !== 'custom') {
+                filteredTxs = db.transactions.filter(t => t.date.startsWith(period));
+            } else if (period === 'custom') {
+                let start = document.getElementById('mizanStartDate').value;
+                let end = document.getElementById('mizanEndDate').value;
+                if (start && end) {
+                    filteredTxs = db.transactions.filter(t => t.date >= start && t.date <= end);
+                }
+            }
+
+            filteredTxs.forEach(t => {
+                if (mizanMap[t.code]) mizanMap[t.code].debit += Number(t.amount);
+                if (mizanMap[t.wallet]) mizanMap[t.wallet].credit += Number(t.amount);
+            });
+
+            let html = '';
+            let totalDebit = 0;
+            let totalCredit = 0;
+
+            db.chartOfAccounts.forEach(acc => {
+                let item = mizanMap[acc.code];
+                if (!item) return;
+                
+                let balance = item.debit - item.credit;
+                if (!item.isHeader) {
+                    totalDebit += item.debit;
+                    totalCredit += item.credit;
+                }
+
+                if (item.debit === 0 && item.credit === 0) return;
+
+                let balColor = 'text-gray-900';
+                if (item.type === 'Gelir') balColor = 'text-emerald-600 font-bold';
+                else if (item.type === 'Gider' || balance < 0) balColor = 'text-red-600 font-bold';
+
+                html += `
+                    <tr class="${item.isHeader ? 'bg-indigo-50/50 font-bold' : ''}">
+                        <td class="px-3 py-2.5 font-mono text-indigo-600 ${item.isHeader ? '' : 'pl-6'}">${item.code}</td>
+                        <td class="px-3 py-2.5 text-gray-800">${item.name}</td>
+                        <td class="px-3 py-2.5 text-right font-semibold text-gray-700">₺${item.debit.toLocaleString('tr-TR', {minimumFractionDigits: 2})}</td>
+                        <td class="px-3 py-2.5 text-right font-semibold text-gray-700">₺${item.credit.toLocaleString('tr-TR', {minimumFractionDigits: 2})}</td>
+                        <td class="px-3 py-2.5 text-right font-bold ${balColor}">₺${Math.abs(balance).toLocaleString('tr-TR', {minimumFractionDigits: 2})} ${balance >= 0 ? '(B)' : '(A)'}</td>
+                    </tr>
+                `;
+            });
+
+            html += `
+                <tr class="bg-gray-100 font-bold">
+                    <td colspan="2" class="px-3 py-3 text-gray-900">TOPLAM MİZAN</td>
+                    <td class="px-3 py-3 text-right text-indigo-600">₺${totalDebit.toLocaleString('tr-TR', {minimumFractionDigits: 2})}</td>
+                    <td class="px-3 py-3 text-right text-indigo-600">₺${totalCredit.toLocaleString('tr-TR', {minimumFractionDigits: 2})}</td>
+                    <td class="px-3 py-3 text-right">-</td>
+                </tr>
+            `;
+
+            document.getElementById('trialBalanceTable').innerHTML = html;
+        }
+
+        // 7. FATURALAR & HESAP KODU SEÇİMİ
+        function saveBill(e) {
+            e.preventDefault();
+            if (db.currentUser === 'aile') return alert('Yetkiniz yok!');
+            const editId = document.getElementById('editBillId').value;
+            const name = document.getElementById('billName').value;
+            const code = document.getElementById('billAccCode').value;
+            const amount = parseFloat(document.getElementById('billAmount').value);
+            const dueDate = document.getElementById('billDueDate').value;
+
+            if (editId) {
+                let b = db.bills.find(item => item.id == editId);
+                if (b) { b.name = name; b.code = code; b.amount = amount; b.dueDate = dueDate; }
+            } else {
+                db.bills.push({ id: Date.now(), name, code, amount, dueDate, paid: false });
+            }
+
+            saveDB();
+            renderAll();
+            resetBillForm();
+            alert('Fatura tahakkuk kaydedildi!');
+        }
+
+        function editBill(id) {
+            if (db.currentUser === 'aile') return alert('Yetkiniz yok!');
+            let b = db.bills.find(item => item.id === id);
+            if (!b) return;
+            document.getElementById('editBillId').value = b.id;
+            document.getElementById('billName').value = b.name;
+            document.getElementById('billAccCode').value = b.code || '770.04';
+            document.getElementById('billAmount').value = b.amount;
+            document.getElementById('billDueDate').value = b.dueDate;
+
+            document.getElementById('billFormTitle').textContent = 'Fatura Düzenle';
+            document.getElementById('billSubmitBtn').textContent = 'Güncelle';
+            document.getElementById('billCancelBtn').classList.remove('hidden');
+        }
+
+        function resetBillForm() {
+            document.getElementById('editBillId').value = '';
+            document.getElementById('billName').value = '';
+            document.getElementById('billAmount').value = '';
+            document.getElementById('billDueDate').value = '';
+            document.getElementById('billFormTitle').textContent = 'Yeni Fatura Tanımla (Tahakkuk)';
+            document.getElementById('billSubmitBtn').textContent = 'Fatura Tahakkuk Et';
+            document.getElementById('billCancelBtn').classList.add('hidden');
+        }
+
+        function payBillFromBills(id) {
+            if (db.currentUser === 'aile') return alert('Yetkiniz yok!');
+            let b = db.bills.find(item => item.id === id);
+            if (!b || b.paid) return;
+
+            let creditAcc = prompt("Hangi hesaptan/kasadan ödenecek? (Örn: 100.01 veya 102.01)", "100.01");
+            if (!creditAcc) return;
+
+            b.paid = true;
+            db.transactions.push({
+                id: Date.now(), type: 'Çift Taraflı', amount: b.amount, code: b.code || '770.04', wallet: creditAcc,
+                date: new Date().toISOString().slice(0, 10), desc: b.name + ' Ödemesi', receipt: null
+            });
+
+            saveDB();
+            renderAll();
+            alert(`"${b.name}" ödendi ve muhasebe fişine işlendi.`);
+        }
+
+        function deleteBill(id) {
+            if (db.currentUser === 'aile') return alert('Yetkiniz yok!');
+            if (confirm('Faturayı silmek istiyor musunuz?')) {
+                db.bills = db.bills.filter(b => b.id !== id);
+                saveDB();
+                renderAll();
+            }
+        }
+
+        function renderBills() {
+            let html = '';
+            db.bills.forEach(b => {
+                let accObj = db.chartOfAccounts.find(a => a.code === b.code);
+                html += `
+                    <tr>
+                        <td class="px-3 py-2.5 font-medium text-gray-800">${b.name}</td>
+                        <td class="px-3 py-2.5 font-mono text-xs text-indigo-600">${b.code} - ${accObj ? accObj.name : ''}</td>
+                        <td class="px-3 py-2.5 font-bold text-gray-900">₺${Number(b.amount).toLocaleString('tr-TR', {minimumFractionDigits: 2})}</td>
+                        <td class="px-3 py-2.5 text-gray-500">${b.dueDate}</td>
+                        <td class="px-3 py-2.5"><span class="px-2 py-1 rounded text-xs font-semibold ${b.paid ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}">${b.paid ? 'Ödendi' : 'Bekliyor'}</span></td>
+                        <td class="px-3 py-2.5 text-center space-x-2">
+                            ${!b.paid && db.currentUser !== 'aile' ? `<button onclick="payBillFromBills(${b.id})" class="bg-indigo-600 hover:bg-indigo-700 text-white px-2.5 py-1 rounded text-xs font-semibold shadow">Öde</button>` : ''}
+                            ${db.currentUser !== 'aile' ? `
+                                <button onclick="editBill(${b.id})" class="text-indigo-600 hover:text-indigo-800 text-xs"><i class="fa-solid fa-pen"></i></button>
+                                <button onclick="deleteBill(${b.id})" class="text-red-500 hover:text-red-700 text-xs"><i class="fa-solid fa-trash"></i></button>
+                            ` : '-'}
+                        </td>
+                    </tr>
+                `;
+            });
+            document.getElementById('billsTable').innerHTML = html || '<tr><td colspan="6" class="text-center py-4 text-gray-400">Fatura kaydı yok.</td></tr>';
+        }
+
+        // 8. BORÇLAR & TAKSİTLER (300'lü hesaplar ve ters bakiye veren bankalar)
+        function renderDebts() {
+            let totals = {};
+            db.chartOfAccounts.forEach(acc => { totals[acc.code] = { debit: 0, credit: 0 }; });
+
+            db.transactions.forEach(t => {
+                if (!totals[t.code]) totals[t.code] = { debit: 0, credit: 0 };
+                totals[t.code].debit += Number(t.amount);
+
+                if (!totals[t.wallet]) totals[t.wallet] = { debit: 0, credit: 0 };
+                totals[t.wallet].credit += Number(t.amount);
+            });
+
+            let html = '';
+            let count = 0;
+
+            db.chartOfAccounts.forEach(acc => {
+                if (acc.isHeader) return;
+                let debit = totals[acc.code] ? totals[acc.code].debit : 0;
+                let credit = totals[acc.code] ? totals[acc.code].credit : 0;
+                let balance = credit - debit; // Pasif karakterli borç bakiye hesabı
+
+                // 300'lü hesaplar VEYA 100/102 kodlu ters bakiye veren (eksiye düşen) banka/kasalar
+                let is300 = acc.code.startsWith('300');
+                let isTersBakiyeBanka = (acc.code.startsWith('100') || acc.code.startsWith('102')) && (debit - credit > 0);
+
+                if (is300 || isTersBakiyeBanka) {
+                    let tutar = is300 ? balance : (debit - credit);
+                    if (tutar > 0) {
+                        count++;
+                        html += `
+                            <tr>
+                                <td class="px-3 py-2.5 font-mono text-indigo-600 font-bold">${acc.code}</td>
+                                <td class="px-3 py-2.5 font-medium text-gray-800">${acc.name}</td>
+                                <td class="px-3 py-2.5"><span class="px-2 py-1 rounded text-xs font-semibold ${is300 ? 'bg-purple-100 text-purple-700' : 'bg-red-100 text-red-700'}">${is300 ? '300lü Pasif Hesap' : 'Ters Bakiye Banka'}</span></td>
+                                <td class="px-3 py-2.5 text-right font-bold text-red-600">₺${tutar.toLocaleString('tr-TR', {minimumFractionDigits: 2})}</td>
+                            </tr>
+                        `;
+                    }
+                }
+            });
+
+            document.getElementById('debtsTable').innerHTML = html || '<tr><td colspan="4" class="text-center py-4 text-gray-400">Aktif borç veya ters bakiye veren hesap bulunmuyor.</td></tr>';
+        }
+
+        // 9. BÜTÇE LİMİTLERİ
+        function saveBudget(e) {
+            e.preventDefault();
+            if (db.currentUser === 'aile') return alert('Yetkiniz yok!');
+            const code = document.getElementById('bAccountCode').value;
+            const limit = parseFloat(document.getElementById('bLimit').value);
+            db.budgets[code] = limit;
+            saveDB();
+            renderAll();
+            alert('Limit kaydedildi!');
+        }
+
+        function renderBudgets() {
+            let html = '';
+            let warningHTML = '';
+
+            for (let code in db.budgets) {
+                let limit = db.budgets[code];
+                let accObj = db.chartOfAccounts.find(a => a.code === code);
+                let spent = db.transactions.filter(t => t.code === code).reduce((sum, t) => sum + Number(t.amount), 0);
+                let percentage = limit > 0 ? Math.min(Math.round((spent / limit) * 100), 100) : 0;
+                let isExceeded = spent > limit;
+
+                html += `
+                    <div class="bg-gray-50 border p-4 rounded-xl space-y-2">
+                        <div class="flex justify-between items-center">
+                            <span class="font-bold text-gray-800">${code} - ${accObj ? accObj.name : ''}</span>
+                            <span class="text-xs font-semibold ${isExceeded ? 'text-red-600' : 'text-gray-500'}">Harcanan: ₺${spent.toLocaleString()} / Limit: ₺${limit.toLocaleString()}</span>
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-2.5">
+                            <div class="h-2.5 rounded-full ${isExceeded ? 'bg-red-600' : 'bg-indigo-600'}" style="width: ${percentage}%"></div>
+                        </div>
+                    </div>
+                `;
+
+                if (isExceeded) {
+                    warningHTML += `
+                        <div class="p-3 bg-red-50 border-l-4 border-red-500 text-red-700 text-xs rounded">
+                            <span class="font-bold">Bütçe Aşımı!</span> "${accObj ? accObj.name : code}" hesabında sınır aşıldı!
+                        </div>
+                    `;
+                }
+            }
+            document.getElementById('budgetGrid').innerHTML = html || '<p class="text-gray-400">Bütçe limiti yok.</p>';
+            document.getElementById('budgetWarningContainer').innerHTML = warningHTML || '<p class="text-sm text-emerald-600"><i class="fa-solid fa-circle-check"></i> Tüm harcamalar bütçe dahilinde.</p>';
+        }
+
+        // 10. RAPORLAR (Excel & PDF)
+        function exportToExcel() {
+            let dataToExport = db.transactions.map(t => {
+                let debitAcc = db.chartOfAccounts.find(a => a.code === t.code);
+                let creditAcc = db.chartOfAccounts.find(a => a.code === t.wallet);
+                return {
+                    Tarih: t.date,
+                    "Borçlu Hesap Kodu": t.code,
+                    "Borçlu Hesap Adı": debitAcc ? debitAcc.name : '',
+                    "Alacaklı Hesap Kodu": t.wallet,
+                    "Alacaklı Hesap Adı": creditAcc ? creditAcc.name : '',
+                    Açıklama: t.desc,
+                    Tutar: t.amount
+                };
+            });
+            const ws = XLSX.utils.json_to_sheet(dataToExport);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Yevmiye Kayıtları");
+            XLSX.writeFile(wb, "EvDefteri_GuncelRapor.xlsx");
+        }
+
+        function exportToPDF() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            doc.text("EvDefteri - Muhasebe Mizan Raporu", 14, 20);
+            
+            let tableData = [];
+            db.chartOfAccounts.forEach(acc => {
+                if(acc.isHeader) return;
+                let txsDebit = db.transactions.filter(t => t.code === acc.code);
+                let txsCredit = db.transactions.filter(t => t.wallet === acc.code);
+                let debit = txsDebit.reduce((s, t) => s + Number(t.amount), 0);
+                let credit = txsCredit.reduce((s, t) => s + Number(t.amount), 0);
+                if(debit > 0 || credit > 0) {
+                    tableData.push([acc.code, acc.name, "₺" + debit, "₺" + credit]);
+                }
+            });
+
+            doc.autoTable({
+                head: [['Hesap Kodu', 'Hesap Adı', 'Borç', 'Alacak']],
+                body: tableData,
+                startY: 30,
+            });
+            doc.save("EvDefteri_Mizan.pdf");
+        }
+
+        window.onload = function() { initApp(); };
+    </script>
+</body>
+</html>
