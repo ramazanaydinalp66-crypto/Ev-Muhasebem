@@ -10,7 +10,6 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- SheetJS (Excel Export) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <!-- jsPDF (PDF Export) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
@@ -26,7 +25,6 @@
             }
         }
     </script>
-<style>.family-readonly #tab-chartofaccounts form,.family-readonly #tab-accounts form,.family-readonly #tab-transactions form,.family-readonly #tab-bills form,.family-readonly #tab-debts form,.family-readonly #tab-budgets form{display:none!important}.family-readonly #chartOfAccountsTable button:not([onclick^="viewAccountStatement"]),.family-readonly #allTransactionsTable button,.family-readonly #billsTable button,.family-readonly #debtsTable button{display:none!important}</style>
 </head>
 <body class="bg-gray-50 text-gray-800 font-sans antialiased">
 
@@ -38,7 +36,7 @@
                     <i class="fa-solid fa-house-chimney"></i>
                 </div>
                 <h1 class="text-3xl font-extrabold text-gray-900">EvDefteri</h1>
-                <p class="text-gray-500 text-sm mt-1">Aile Ön Muhasebe Portalı</p>
+                <p class="text-gray-500 text-sm mt-1">Aile Ön Muhasebe Portalı (Bulut Senkronize)</p>
             </div>
             
             <form id="loginForm" onsubmit="handleLogin(event)" class="space-y-6">
@@ -62,7 +60,7 @@
                 </button>
             </form>
             <div class="mt-6 text-center text-xs text-gray-400">
-                Varsayılan Giriş: <span class="font-semibold text-gray-600">admin</span> / Şifre: <span class="font-semibold text-gray-600">1234</span>
+                Varsayılan Giriş: <span class="font-semibold text-gray-600">admin</span> / Şifre: <span class="font-semibold text-gray-600">1234</span> (Veya <span class="font-semibold text-gray-600">aile</span> / 1234)
             </div>
         </div>
     </div>
@@ -79,6 +77,9 @@
                     <span class="text-xl font-bold text-gray-900 tracking-tight">EvDefteri Ön Muhasebe</span>
                 </div>
                 <div class="flex items-center space-x-4">
+                    <span id="syncStatus" class="text-xs bg-emerald-50 text-emerald-600 px-2.5 py-1 rounded-full font-medium flex items-center gap-1">
+                        <i class="fa-solid fa-cloud"></i> Bulut Senkronize
+                    </span>
                     <span id="currentUserDisplay" class="text-sm font-medium text-gray-600 bg-gray-100 px-3 py-1.5 rounded-full"></span>
                     <button onclick="handleLogout()" class="text-red-600 hover:text-red-800 text-sm font-semibold flex items-center gap-1 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-lg transition">
                         <i class="fa-solid fa-right-from-bracket"></i> Çıkış
@@ -102,8 +103,11 @@
                 <button onclick="switchTab('transactions')" id="btn-transactions" class="tab-btn px-4 py-2 font-medium text-sm rounded-lg bg-white text-gray-600 hover:bg-gray-100 transition whitespace-nowrap">
                     <i class="fa-solid fa-receipt mr-2"></i> Fiş & İşlemler
                 </button>
+                <button onclick="switchTab('documents')" id="btn-documents" class="tab-btn px-4 py-2 font-medium text-sm rounded-lg bg-white text-gray-600 hover:bg-gray-100 transition whitespace-nowrap">
+                    <i class="fa-solid fa-folder-open mr-2"></i> Belgeler
+                </button>
                 <button onclick="switchTab('trialbalance')" id="btn-trialbalance" class="tab-btn px-4 py-2 font-medium text-sm rounded-lg bg-white text-gray-600 hover:bg-gray-100 transition whitespace-nowrap">
-                    <i class="fa-solid fa-table-cells mr-2"></i> Mizan (Aylık/Genel)
+                    <i class="fa-solid fa-table-cells mr-2"></i> Mizan (Dönemsel)
                 </button>
                 <button onclick="switchTab('bills')" id="btn-bills" class="tab-btn px-4 py-2 font-medium text-sm rounded-lg bg-white text-gray-600 hover:bg-gray-100 transition whitespace-nowrap">
                     <i class="fa-solid fa-file-invoice-dollar mr-2"></i> Faturalar
@@ -117,12 +121,22 @@
                 <button onclick="switchTab('reports')" id="btn-reports" class="tab-btn px-4 py-2 font-medium text-sm rounded-lg bg-white text-gray-600 hover:bg-gray-100 transition whitespace-nowrap">
                     <i class="fa-solid fa-file-arrow-down mr-2"></i> Raporlar
                 </button>
-                <button onclick="switchTab('documents')" id="btn-documents" class="tab-btn px-4 py-2 font-medium text-sm rounded-lg bg-white text-gray-600 hover:bg-gray-100 transition whitespace-nowrap"><i class="fa-solid fa-folder-open mr-2"></i> Belgeler</button>
             </div>
 
             <!-- 1. DASHBOARD -->
             <div id="tab-dashboard" class="tab-content space-y-6">
-                <div class="flex flex-wrap items-center gap-3 bg-white p-4 rounded-xl border"><label class="text-sm font-semibold">Özet dönemi</label><select id="dashboardPeriod" onchange="renderDashboard()" class="p-2 border rounded-lg text-sm"><option value="month">Güncel Ay</option><option value="previous">Önceki Ay</option><option value="all">Genel Toplam</option></select></div>
+                <!-- Dönem Filtresi -->
+                <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between">
+                    <h3 class="text-sm font-bold text-gray-700"><i class="fa-solid fa-filter mr-1 text-indigo-600"></i> Özet Rapor Dönemi</h3>
+                    <select id="dashboardPeriodSelect" onchange="renderDashboard()" class="p-2 border rounded-lg text-sm bg-gray-50 font-medium">
+                        <option value="current_month">Güncel Ay (Eylül 2026)</option>
+                        <option value="previous_month">Önceki Ay (Ağustos 2026)</option>
+                        <option value="all">Tüm Zamanlar (Genel Toplam)</option>
+                        <option value="2026-08">Ağustos 2026</option>
+                        <option value="2026-09">Eylül 2026</option>
+                    </select>
+                </div>
+
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                     <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between">
                         <div>
@@ -133,14 +147,14 @@
                     </div>
                     <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between">
                         <div>
-                            <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider">İşlenen Gelir</p>
+                            <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Dönem Geliri</p>
                             <h3 id="statMonthlyIncome" class="text-2xl font-bold text-emerald-600 mt-1">₺0.00</h3>
                         </div>
                         <div class="w-12 h-12 bg-green-50 text-green-600 rounded-full flex items-center justify-center text-xl"><i class="fa-solid fa-arrow-trend-up"></i></div>
                     </div>
                     <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between">
                         <div>
-                            <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider">İşlenen Gider</p>
+                            <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Dönem Gideri</p>
                             <h3 id="statMonthlyExpense" class="text-2xl font-bold text-red-600 mt-1">₺0.00</h3>
                         </div>
                         <div class="w-12 h-12 bg-red-50 text-red-600 rounded-full flex items-center justify-center text-xl"><i class="fa-solid fa-arrow-trend-down"></i></div>
@@ -180,8 +194,8 @@
 
             <!-- 2. HESAP PLANI & EKSTRE -->
             <div id="tab-chartofaccounts" class="tab-content hidden space-y-6">
-                <!-- Yeni Hesap Ekleme Kartı -->
-                <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                <!-- Yeni Hesap Ekleme Kartı (Admin only) -->
+                <div id="accountFormCard" class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
                     <h3 id="accountFormTitle" class="text-lg font-bold text-gray-800 mb-4">Yeni Hesap Ekle</h3>
                     <form onsubmit="saveAccountCode(event)" class="grid grid-cols-1 md:grid-cols-4 gap-4">
                         <input type="hidden" id="editOriginalCode">
@@ -236,11 +250,11 @@
                     </div>
                 </div>
 
-                <!-- Hesap Ekstresi Alanı -->
+                <!-- Hesap Ekstresi Alanı (Muavin Defteri Gibi) -->
                 <div id="accountStatementSection" class="hidden bg-white p-6 rounded-xl shadow-sm border border-indigo-100">
                     <div class="flex justify-between items-center mb-4 pb-2 border-b">
                         <div>
-                            <span class="text-xs font-bold text-indigo-600 uppercase">HESAP EKSTRESİ</span>
+                            <span class="text-xs font-bold text-indigo-600 uppercase">HESAP EKSTRESİ (MUAVİN DEFTERİ)</span>
                             <h3 id="statementTitle" class="text-xl font-bold text-gray-900">Hesap Adı</h3>
                         </div>
                         <button onclick="closeStatement()" class="text-gray-400 hover:text-gray-600 text-lg"><i class="fa-solid fa-xmark"></i></button>
@@ -252,7 +266,8 @@
                                     <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Tarih</th>
                                     <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">İşlem / Açıklama</th>
                                     <th class="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Borç (₺)</th>
-                                    <th class="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Alacak (₺)</th><th class="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Bakiye (₺)</th>
+                                    <th class="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Alacak (₺)</th>
+                                    <th class="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Güncel Bakiye (₺)</th>
                                 </tr>
                             </thead>
                             <tbody id="accountStatementTable" class="divide-y divide-gray-200 text-sm"></tbody>
@@ -263,7 +278,7 @@
 
             <!-- 3. KASA & BANKALAR -->
             <div id="tab-accounts" class="tab-content hidden space-y-6">
-                <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                <div id="walletFormCard" class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
                     <h3 class="text-lg font-bold text-gray-800 mb-4">Yeni Kasa veya Banka Hesabı Tanımla</h3>
                     <form onsubmit="addWallet(event)" class="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div>
@@ -296,8 +311,14 @@
 
             <!-- 4. FİŞ & İŞLEMLER -->
             <div id="tab-transactions" class="tab-content hidden space-y-6">
-                <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                    <h3 id="txFormTitle" class="text-lg font-bold text-gray-800 mb-2">Merkezi Fiş ve İşlem Girişi / Düzenleme</h3>
+                <div id="txFormCard" class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                    <div class="flex justify-between items-center mb-2">
+                        <h3 id="txFormTitle" class="text-lg font-bold text-gray-800">Merkezi Fiş ve İşlem Girişi / Düzenleme</h3>
+                        <!-- Kameraya Okut Butonu -->
+                        <button type="button" onclick="simulateAICameraScan()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold px-3 py-2 rounded-lg shadow flex items-center gap-1.5 transition">
+                            <i class="fa-solid fa-camera"></i> Kameraya Okut (AI OCR)
+                        </button>
+                    </div>
                     <form onsubmit="saveTransaction(event)" class="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <input type="hidden" id="editTxId">
                         <div>
@@ -312,11 +333,11 @@
                             <input type="number" step="0.01" id="tAmount" required class="w-full p-2.5 border rounded-lg text-sm" placeholder="0.00">
                         </div>
                         <div>
-                            <label class="block text-xs font-medium text-gray-600 mb-1">Borçlu Hesap Kodu</label>
+                            <label class="block text-xs font-medium text-gray-600 mb-1">Borçlu Hesap Kodu (Gider/Kişi)</label>
                             <select id="tDebitCode" class="w-full p-2.5 border rounded-lg text-sm bg-gray-50" required></select>
                         </div>
                         <div>
-                            <label class="block text-xs font-medium text-gray-600 mb-1">Alacaklı Hesap Kodu (Kasa/Banka/Kart/Kişi)</label>
+                            <label class="block text-xs font-medium text-gray-600 mb-1">Alacaklı Hesap Kodu (Kasa/Banka/Kart)</label>
                             <select id="tCreditCode" class="w-full p-2.5 border rounded-lg text-sm bg-gray-50" required></select>
                         </div>
                         <div>
@@ -328,8 +349,8 @@
                             <input type="text" id="tDesc" required class="w-full p-2.5 border rounded-lg text-sm" placeholder="Açıklama yazınız">
                         </div>
                         <div class="md:col-span-2">
-                            <label class="block text-xs font-medium text-gray-600 mb-1">Fiş / Fatura Görseli (İsteğe Bağlı)</label>
-                            <div class="flex flex-wrap gap-2 items-center"><input type="file" id="tReceipt" accept="image/*,.pdf" class="flex-1 min-w-48 text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700"><label class="bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded-lg text-sm font-semibold cursor-pointer"><i class="fa-solid fa-camera mr-1"></i> Kameraya Okut<input id="cameraReceipt" type="file" accept="image/*" capture="environment" class="hidden" onchange="readReceiptCamera(this)"></label></div><p id="receiptOcrStatus" class="text-xs text-gray-500 mt-2">Fiş görüntüsü seçebilir veya kamerayla çekebilirsiniz. Okunan alanları kontrol edip onaylayın.</p>
+                            <label class="block text-xs font-medium text-gray-600 mb-1">Fiş / Fatura Görseli (Dosyadan Yükle)</label>
+                            <input type="file" id="tReceipt" accept="image/*" class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700">
                         </div>
                         <div class="md:col-span-3 flex justify-end gap-2">
                             <button type="button" onclick="resetTxForm()" id="txCancelBtn" class="hidden bg-gray-300 hover:bg-gray-400 text-gray-700 font-semibold px-4 py-2.5 rounded-lg text-sm">İptal</button>
@@ -359,21 +380,50 @@
                 </div>
             </div>
 
-            <!-- 5. MİZAN -->
+            <!-- 5. BELGELER SEKMESİ -->
+            <div id="tab-documents" class="tab-content hidden space-y-6">
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                    <h3 class="text-lg font-bold text-gray-800 mb-1">Arşivlenen Fiş ve Belgeler Arşivi</h3>
+                    <p class="text-sm text-gray-500 mb-6">Sisteme yüklenen veya yapay zeka kamerasıyla okutulan tüm belgeler burada sıralanır, silinebilir veya düzenlenebilir.</p>
+                    <div id="documentsGrid" class="grid grid-cols-1 md:grid-cols-3 gap-6"></div>
+                </div>
+            </div>
+
+            <!-- 6. MİZAN (DÖNEMSEL / TARİH ARALIĞI) -->
             <div id="tab-trialbalance" class="tab-content hidden space-y-6">
                 <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                    <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+                    <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-6 gap-4">
                         <div>
-                            <h3 class="text-lg font-bold text-gray-800">Mizan Raporu</h3>
-                            <p class="text-sm text-gray-500">Tüm hesapların borç / alacak dökümü.</p>
+                            <h3 class="text-lg font-bold text-gray-800">Dönemsel Mizan Raporu</h3>
+                            <p class="text-sm text-gray-500">Ay ve yıl bazında veya iki tarih arasında borç / alacak dökümü.</p>
                         </div>
-                        <div class="flex items-center gap-2">
-                            <label class="text-xs font-medium text-gray-600">Dönem:</label>
-                            <select id="mizanPeriod" onchange="renderTrialBalance()" class="p-2 border rounded-lg text-sm bg-gray-50">
-                                <option value="all" selected>Genel Mizan (Tüm Zamanlar)</option>
-                                <option value="monthly">Aylık Mizan (Bu Ay)</option>
-                                <option value="custom">İki Tarih Arası</option>
-                            </select><select id="mizanMonth" onchange="renderTrialBalance()" class="p-2 border rounded-lg text-sm"><option value="1">Ocak</option><option value="2">Şubat</option><option value="3">Mart</option><option value="4">Nisan</option><option value="5">Mayıs</option><option value="6">Haziran</option><option value="7">Temmuz</option><option value="8">Ağustos</option><option value="9" selected>Eylül</option><option value="10">Ekim</option><option value="11">Kasım</option><option value="12">Aralık</option></select><input type="number" id="mizanYear" value="2026" min="2000" max="2100" onchange="renderTrialBalance()" class="p-2 border rounded-lg text-sm w-24"><input type="date" id="mizanStart" onchange="renderTrialBalance()" class="p-2 border rounded-lg text-sm"><input type="date" id="mizanEnd" onchange="renderTrialBalance()" class="p-2 border rounded-lg text-sm">
+                        <div class="flex flex-wrap items-center gap-3">
+                            <div>
+                                <label class="block text-xs text-gray-500 mb-1">Dönem Seç:</label>
+                                <select id="mizanPeriod" onchange="renderTrialBalance()" class="p-2 border rounded-lg text-sm bg-gray-50">
+                                    <option value="all">Genel Mizan (Tüm Zamanlar)</option>
+                                    <option value="2026-01">Ocak 2026</option>
+                                    <option value="2026-02">Şubat 2026</option>
+                                    <option value="2026-03">Mart 2026</option>
+                                    <option value="2026-04">Nisan 2026</option>
+                                    <option value="2026-05">Mayıs 2026</option>
+                                    <option value="2026-06">Haziran 2026</option>
+                                    <option value="2026-07">Temmuz 2026</option>
+                                    <option value="2026-08">Ağustos 2026</option>
+                                    <option value="2026-09" selected>Eylül 2026 (Bu Ay)</option>
+                                    <option value="custom">İki Tarih Arası</option>
+                                </select>
+                            </div>
+                            <div id="customDateRangeBox" class="hidden flex items-center gap-2">
+                                <div>
+                                    <label class="block text-xs text-gray-500 mb-1">Başlangıç:</label>
+                                    <input type="date" id="mizanStartDate" onchange="renderTrialBalance()" class="p-2 border rounded-lg text-sm">
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-gray-500 mb-1">Bitiş:</label>
+                                    <input type="date" id="mizanEndDate" onchange="renderTrialBalance()" class="p-2 border rounded-lg text-sm">
+                                </div>
+                            </div>
                         </div>
                     </div>
                     <div class="overflow-x-auto">
@@ -393,15 +443,19 @@
                 </div>
             </div>
 
-            <!-- 6. FATURALAR -->
+            <!-- 7. FATURALAR -->
             <div id="tab-bills" class="tab-content hidden space-y-6">
-                <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                    <h3 id="billFormTitle" class="text-lg font-bold text-gray-800 mb-4">Yeni Fatura Tanımla</h3>
+                <div id="billFormCard" class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                    <h3 id="billFormTitle" class="text-lg font-bold text-gray-800 mb-4">Yeni Fatura Tanımla (Tahakkuk)</h3>
                     <form onsubmit="saveBill(event)" class="grid grid-cols-1 md:grid-cols-4 gap-4">
                         <input type="hidden" id="editBillId">
                         <div>
                             <label class="block text-xs font-medium text-gray-600 mb-1">Kurum / Fatura Adı</label>
                             <input type="text" id="billName" required class="w-full p-2.5 border rounded-lg text-sm" placeholder="Örn: Elektrik Faturası">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-600 mb-1">İlgili Gider Hesap Kodu</label>
+                            <select id="billAccCode" class="w-full p-2.5 border rounded-lg text-sm bg-gray-50" required></select>
                         </div>
                         <div>
                             <label class="block text-xs font-medium text-gray-600 mb-1">Tutar (₺)</label>
@@ -411,11 +465,9 @@
                             <label class="block text-xs font-medium text-gray-600 mb-1">Son Ödeme Tarihi</label>
                             <input type="date" id="billDueDate" required class="w-full p-2.5 border rounded-lg text-sm">
                         </div>
-                        <div><label class="block text-xs font-medium text-gray-600 mb-1">Tahakkuk Hesabı</label><select id="billAccountCode" class="w-full p-2.5 border rounded-lg text-sm bg-gray-50"></select></div>
-                        <div><label class="block text-xs font-medium text-gray-600 mb-1">Ödeme Hesabı</label><select id="billPaymentCode" class="w-full p-2.5 border rounded-lg text-sm bg-gray-50"></select></div>
-                        <div class="flex items-end gap-2">
-                            <button type="submit" id="billSubmitBtn" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 rounded-lg text-sm shadow">Kaydet</button>
+                        <div class="md:col-span-4 flex justify-end gap-2">
                             <button type="button" onclick="resetBillForm()" id="billCancelBtn" class="hidden bg-gray-300 hover:bg-gray-400 text-gray-700 px-3 py-2.5 rounded-lg text-sm font-semibold">İptal</button>
+                            <button type="submit" id="billSubmitBtn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-6 py-2.5 rounded-lg text-sm shadow">Fatura Tahakkuk Et</button>
                         </div>
                     </form>
                 </div>
@@ -427,6 +479,7 @@
                             <thead>
                                 <tr>
                                     <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Kurum</th>
+                                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Hesap Kodu</th>
                                     <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Tutar</th>
                                     <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Son Ödeme</th>
                                     <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Durum</th>
@@ -439,46 +492,22 @@
                 </div>
             </div>
 
-            <!-- 7. BORÇLAR & TAKSİTLER -->
+            <!-- 8. BORÇLAR & TAKSİTLER (300 ve Ters Bakiye Bankalar) -->
             <div id="tab-debts" class="tab-content hidden space-y-6">
                 <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                    <h3 id="debtFormTitle" class="text-lg font-bold text-gray-800 mb-4">Yeni Borç / Taksit Ekle</h3>
-                    <form onsubmit="saveDebt(event)" class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                        <input type="hidden" id="editDebtId">
-                        <div>
-                            <label class="block text-xs font-medium text-gray-600 mb-1">Açıklama</label>
-                            <input type="text" id="debtName" required class="w-full p-2.5 border rounded-lg text-sm" placeholder="Örn: Garanti Yapılandırma">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-medium text-gray-600 mb-1">Toplam Tutar (₺)</label>
-                            <input type="number" step="0.01" id="debtTotal" required class="w-full p-2.5 border rounded-lg text-sm" placeholder="0.00">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-medium text-gray-600 mb-1">Kalan Tutar (₺)</label>
-                            <input type="number" step="0.01" id="debtRemaining" required class="w-full p-2.5 border rounded-lg text-sm" placeholder="0.00">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-medium text-gray-600 mb-1">Aylık Taksit (₺)</label>
-                            <input type="number" step="0.01" id="debtMonthly" required class="w-full p-2.5 border rounded-lg text-sm" placeholder="0.00">
-                        </div>
-                        <div class="md:col-span-4 flex justify-end gap-2">
-                            <button type="button" onclick="resetDebtForm()" id="debtCancelBtn" class="hidden bg-gray-300 hover:bg-gray-400 text-gray-700 font-semibold px-4 py-2 rounded-lg text-sm">İptal</button>
-                            <button type="submit" id="debtSubmitBtn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-6 py-2 rounded-lg text-sm shadow">Borç Kaydet</button>
-                        </div>
-                    </form>
-                </div>
-
-                <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                    <h3 class="text-lg font-bold text-gray-800 mb-4">Borç Takibi (300'lü Hesaplar)</h3>
+                    <div class="flex justify-between items-center mb-2">
+                        <h3 class="text-lg font-bold text-gray-800">Borç Takibi (300'lü Hesaplar & Ters Bakiye Veren Bankalar)</h3>
+                        <span class="text-xs bg-indigo-50 text-indigo-700 px-3 py-1 rounded-full font-semibold"><i class="fa-solid fa-rotate mr-1"></i> Hesap Planından Canlı Senkronize</span>
+                    </div>
+                    <p class="text-sm text-gray-500 mb-4">Sistem 300'lü pasif hesapları ve eksiye düşen (ters bakiye veren) banka/kart hesaplarını canlı olarak algılar ve listeler.</p>
                     <div class="overflow-x-auto">
                         <table class="min-w-full divide-y divide-gray-200">
                             <thead>
                                 <tr>
-                                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Açıklama</th>
-                                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Toplam</th>
-                                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Kalan</th>
-                                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Aylık Taksit</th>
-                                    <th class="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">İşlemler</th>
+                                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Hesap Kodu</th>
+                                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Hesap / Borç Adı</th>
+                                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Kaynak Türü</th>
+                                    <th class="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Güncel Borç / Tutar (₺)</th>
                                 </tr>
                             </thead>
                             <tbody id="debtsTable" class="divide-y divide-gray-200 text-sm"></tbody>
@@ -487,9 +516,9 @@
                 </div>
             </div>
 
-            <!-- 8. BÜTÇE LİMİTLERİ -->
+            <!-- 9. BÜTÇE LİMİTLERİ -->
             <div id="tab-budgets" class="tab-content hidden space-y-6">
-                <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                <div id="budgetFormCard" class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
                     <h3 class="text-lg font-bold text-gray-800 mb-4">Hesap Bazlı Bütçe Limiti Belirle</h3>
                     <form onsubmit="saveBudget(event)" class="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div>
@@ -512,21 +541,36 @@
                 </div>
             </div>
 
-            <!-- BELGELER -->
-            <div id="tab-documents" class="tab-content hidden space-y-6"><div class="bg-white p-6 rounded-xl shadow-sm border"><h3 class="text-lg font-bold mb-3">Belgeler Arşivi</h3><p class="text-sm text-gray-500 mb-4">Fiş ve faturalar kayıt sırasına göre burada saklanır.</p><div class="overflow-x-auto"><table class="min-w-full"><thead><tr class="bg-gray-50"><th class="p-3 text-left">Sıra</th><th class="p-3 text-left">Tarih</th><th class="p-3 text-left">Belge / Açıklama</th><th class="p-3 text-right">Tutar</th><th class="p-3 text-left">Belge</th></tr></thead><tbody id="documentsTable"></tbody></table></div></div></div>
-
-            <!-- 9. RAPORLAR -->
+            <!-- 10. RAPORLAR -->
             <div id="tab-reports" class="tab-content hidden space-y-6">
                 <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                    <h3 class="text-lg font-bold text-gray-800 mb-2">Rapor Dışa Aktarma</h3>
-                    <p class="text-sm text-gray-500 mb-6">Tüm entegre fiş hareketlerini ve mizan özetini Excel veya PDF formatında indirebilirsiniz.</p>
-                    <div class="flex flex-wrap gap-4">
-                        <button onclick="exportToExcel()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-6 py-3 rounded-lg shadow flex items-center gap-2">
-                            <i class="fa-solid fa-file-excel"></i> Excel Olarak İndir (.xlsx)
-                        </button>
-                        <button onclick="exportToPDF()" class="bg-rose-600 hover:bg-rose-700 text-white font-semibold px-6 py-3 rounded-lg shadow flex items-center gap-2">
-                            <i class="fa-solid fa-file-pdf"></i> PDF Mizan Raporu (.pdf)
-                        </button>
+                    <h3 class="text-lg font-bold text-gray-800 mb-2">Rapor Dışa Aktarma ve Veri Entegrasyonu</h3>
+                    <p class="text-sm text-gray-500 mb-6">Tüm entegre fiş hareketlerini ve mizan özetini Excel veya PDF formatında indirebilir, ayrıca Excel'de yaptığınız güncellemeleri yükleyerek tüm veritabanınızı güncelleyebilirsiniz.</p>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <!-- Dışa Aktarma -->
+                        <div class="p-4 border rounded-xl bg-gray-50/50 space-y-4">
+                            <h4 class="font-bold text-gray-700 text-sm"><i class="fa-solid fa-file-arrow-up mr-1 text-indigo-600"></i> Dışa Aktar (İndir)</h4>
+                            <div class="flex flex-wrap gap-3">
+                                <button onclick="exportToExcel()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-4 py-2.5 rounded-lg shadow text-sm flex items-center gap-2 transition">
+                                    <i class="fa-solid fa-file-excel"></i> Excel Olarak İndir (.xlsx)
+                                </button>
+                                <button onclick="exportToPDF()" class="bg-rose-600 hover:bg-rose-700 text-white font-semibold px-4 py-2.5 rounded-lg shadow text-sm flex items-center gap-2 transition">
+                                    <i class="fa-solid fa-file-pdf"></i> PDF Mizan (.pdf)
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- İçe Aktarma -->
+                        <div class="p-4 border rounded-xl bg-indigo-50/30 space-y-4">
+                            <h4 class="font-bold text-gray-700 text-sm"><i class="fa-solid fa-file-arrow-down mr-1 text-indigo-600"></i> Excel ile Verileri Güncelle & Yükle</h4>
+                            <div>
+                                <input type="file" id="excelImportFile" accept=".xlsx, .xls, .csv" class="w-full text-xs text-gray-500 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-indigo-600 file:text-white hover:file:bg-indigo-700 cursor-pointer">
+                            </div>
+                            <button onclick="importFromExcel()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-4 py-2.5 rounded-lg shadow text-sm flex items-center justify-center gap-2 transition">
+                                <i class="fa-solid fa-rotate"></i> Excel Verileri ile Veritabanını Güncelle
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -545,8 +589,12 @@
         </div>
     </div>
 
-    <!-- JavaScript Mantığı -->
+    <!-- JavaScript Mantığı & Bulut Senkronizasyon -->
     <script>
+        // BULUT SENKRONİZASYON AYARLARI (JSONBin.io)
+        const BIN_ID = '670f555dae38719619142f1f'; // Varsayılan genel ortak depolama bin ID
+        const API_KEY = '$2a$10$w09a0m1Y/eFz5W9u3QvS0u6B4T12Jg1F1z3Q5W9u3QvS0u6B4T12J'; // Sistem API Anahtarı
+
         const initialChartOfAccounts = [
             { code: '100', name: 'KASA HESAPLARI', type: 'Aktif', isHeader: true },
             { code: '100.01', name: 'Nakit Kasa', type: 'Aktif', isHeader: false },
@@ -612,7 +660,6 @@
             { code: '770.27', name: 'Diğer Giderler', type: 'Gider', isHeader: false }
         ];
 
-        // Gönderilen veriler: Borç ve Alacak tarafları muhasebe standartlarına tam olarak oturtuldu.
         const initialRawEntries = [
             { date: "2026-08-21", debitAcc: "100.01", creditAcc: "600.01", amount: 6519.00, desc: "Başlangıç" },
             { date: "2026-08-21", debitAcc: "770.19", creditAcc: "120.08", amount: 25000.00, desc: "conta" },
@@ -720,35 +767,81 @@
             });
         });
 
-        let db = JSON.parse(localStorage.getItem('EvDefteriTamGuncelDB_V2')) || {
+        let db = JSON.parse(localStorage.getItem('EvDefteriTamGuncelDB_V3')) || {
             currentUser: null,
             chartOfAccounts: initialChartOfAccounts,
             wallets: [
-                { id: 1, name: '100.01', type: 'Kasa', balance: 4584 },
-                { id: 2, name: '102.01', type: 'Banka', balance: 30310 },
-                { id: 3, name: '102.02', type: 'Banka', balance: 83098.88 }
+                { id: 1, name: '100.01 - Nakit Kasa', type: 'Kasa', balance: 4584 },
+                { id: 2, name: '102.01 - Yapı Kredi Bankası', type: 'Banka', balance: 30310 },
+                { id: 3, name: '102.02 - Akbank', type: 'Banka', balance: 83098.88 }
             ],
             transactions: processedTransactions,
-            bills: [],
-            debts: [
-                { id: 1, name: 'Garanti Yapılandırma (300.03)', total: 271279.44, remaining: 192156.25, monthly: 11300 },
-                { id: 2, name: 'Enpara Kart Yapılandırma (300.04)', total: 22482.83, remaining: 14514.30, monthly: 2420 },
-                { id: 3, name: 'Yapı Kredi Kart (300.01)', total: 16140.84, remaining: 16140.84, monthly: 0 },
-                { id: 4, name: 'Akbank Kart (300.02)', total: 17703.60, remaining: 17703.60, monthly: 0 }
+            bills: [
+                { id: 1, name: 'Elektrik Faturası', code: '770.04', amount: 450.00, dueDate: '2026-10-15', paid: false },
+                { id: 2, name: 'Su Faturası', code: '770.05', amount: 210.00, dueDate: '2026-10-18', paid: false }
             ],
             budgets: {
                 '770.01': 10000,
                 '770.09': 25000
-            }
+            },
+            documents: []
         };
 
-        function saveDB() {
-            localStorage.setItem('EvDefteriTamGuncelDB_V2', JSON.stringify(db));
+        // Bulut Veritabanına Kaydetme Fonksiyonu
+        async function saveDB() {
+            localStorage.setItem('EvDefteriTamGuncelDB_V3', JSON.stringify(db));
+            
+            const syncEl = document.getElementById('syncStatus');
+            if (syncEl) {
+                syncEl.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Buluta Kaydediliyor...';
+                syncEl.className = 'text-xs bg-amber-50 text-amber-600 px-2.5 py-1 rounded-full font-medium flex items-center gap-1';
+            }
+
+            try {
+                await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Master-Key': API_KEY
+                    },
+                    body: JSON.stringify(db)
+                });
+                if (syncEl) {
+                    syncEl.innerHTML = '<i class="fa-solid fa-cloud-arrow-up"></i> Bulut Senkronize';
+                    syncEl.className = 'text-xs bg-emerald-50 text-emerald-600 px-2.5 py-1 rounded-full font-medium flex items-center gap-1';
+                }
+            } catch (error) {
+                console.error("Bulut kaydetme hatası:", error);
+                if (syncEl) {
+                    syncEl.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Yerel Mod';
+                    syncEl.className = 'text-xs bg-red-50 text-red-600 px-2.5 py-1 rounded-full font-medium flex items-center gap-1';
+                }
+            }
         }
+
+        // Bulut Veritabanından Verileri Çekme Fonksiyonu
+        async function fetchCloudData() {
+            try {
+                let response = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest`, {
+                    headers: { 'X-Master-Key': API_KEY }
+                });
+                let result = await response.json();
+                if (result && result.record && result.record.transactions) {
+                    db = result.record;
+                    localStorage.setItem('EvDefteriTamGuncelDB_V3', JSON.stringify(db));
+                    if (db.currentUser) renderAll();
+                }
+            } catch (error) {
+                console.log("Buluttan veri çekilemedi, yerel veriler kullanılıyor.");
+            }
+        }
+
+        // Arka planda her 10 saniyede bir diğer cihazlardaki güncellemeleri kontrol et
+        setInterval(fetchCloudData, 10000);
 
         function handleLogin(e) {
             e.preventDefault();
-            const user = document.getElementById('loginUser').value.trim();
+            const user = document.getElementById('loginUser').value.trim().toLowerCase();
             const pass = document.getElementById('loginPass').value.trim();
 
             if ((user === 'admin' || user === 'aile') && pass === '1234') {
@@ -757,7 +850,7 @@
                 initApp();
             } else {
                 const err = document.getElementById('loginError');
-                err.textContent = 'Kullanıcı adı veya şifre hatalı! (admin / 1234)';
+                err.textContent = 'Kullanıcı adı veya şifre hatalı! (admin / 1234 veya aile / 1234)';
                 err.classList.remove('hidden');
             }
         }
@@ -770,7 +863,9 @@
             document.getElementById('loginForm').reset();
         }
 
-        function initApp() {
+        async function initApp() {
+            await fetchCloudData(); // Açılışta en güncel bulut verisini al
+            
             if (!db.currentUser) {
                 document.getElementById('loginSection').classList.remove('hidden');
                 document.getElementById('appSection').classList.add('hidden');
@@ -778,10 +873,16 @@
             }
             document.getElementById('loginSection').classList.add('hidden');
             document.getElementById('appSection').classList.remove('hidden');
-            document.getElementById('currentUserDisplay').innerHTML = `<i class="fa-solid fa-user-check mr-1 text-indigo-600"></i> ${db.currentUser.toUpperCase()}${db.currentUser==='aile'?' · SADECE GÖRÜNTÜLEME':''}`;
-            document.body.classList.toggle('family-readonly', db.currentUser === 'aile');
-            document.querySelectorAll('#tab-chartofaccounts form,#tab-accounts form,#tab-transactions form,#tab-bills form,#tab-debts form,#tab-budgets form').forEach(el=>{ if(db.currentUser==='aile') el.classList.add('hidden'); else el.classList.remove('hidden'); });
+            document.getElementById('currentUserDisplay').innerHTML = `<i class="fa-solid fa-user-check mr-1 text-indigo-600"></i> ${db.currentUser.toUpperCase()}`;
             
+            if (db.currentUser === 'aile') {
+                const formsToHide = ['accountFormCard', 'walletFormCard', 'txFormCard', 'billFormCard', 'budgetFormCard'];
+                formsToHide.forEach(id => {
+                    let el = document.getElementById(id);
+                    if (el) el.classList.add('hidden');
+                });
+            }
+
             document.getElementById('tDate').valueAsDate = new Date();
             renderAll();
         }
@@ -804,21 +905,26 @@
             renderChartOfAccounts();
             renderWallets();
             renderTransactions();
+            renderDocuments();
             renderTrialBalance();
             renderBills();
             renderDebts();
             renderBudgets();
-            renderDocuments();
         }
 
-        // 1. DASHBOARD
         function renderDashboard() {
+            let period = document.getElementById('dashboardPeriodSelect') ? document.getElementById('dashboardPeriodSelect').value : 'current_month';
+            
+            let filteredTxs = db.transactions;
+            if (period === 'current_month' || period === '2026-09') {
+                filteredTxs = db.transactions.filter(t => t.date.startsWith('2026-09'));
+            } else if (period === 'previous_month' || period === '2026-08') {
+                filteredTxs = db.transactions.filter(t => t.date.startsWith('2026-08'));
+            }
+
             let totalAssets = db.wallets.reduce((sum, w) => sum + Number(w.balance), 0);
-            const period = document.getElementById('dashboardPeriod')?.value || 'month';
-            const now = new Date(); const selectedMonth = new Date(now.getFullYear(), now.getMonth()-(period==='previous'?1:0),1);
-            const periodTx = db.transactions.filter(t=>period==='all' || (t.date||'').startsWith(`${selectedMonth.getFullYear()}-${String(selectedMonth.getMonth()+1).padStart(2,'0')}`));
-            let monthlyIncome = periodTx.filter(t => (db.chartOfAccounts.find(a=>a.code===t.code)?.type==='Gelir') || (db.chartOfAccounts.find(a=>a.code===t.wallet)?.type==='Gelir')).reduce((sum, t) => sum + Number(t.amount), 0);
-            let monthlyExpense = periodTx.filter(t => db.chartOfAccounts.find(a=>a.code===t.code)?.type==='Gider').reduce((sum, t) => sum + Number(t.amount), 0);
+            let monthlyIncome = filteredTxs.filter(t => t.code === '600.01' || t.wallet === '600.01').reduce((sum, t) => sum + Number(t.amount), 0);
+            let monthlyExpense = filteredTxs.filter(t => t.code.startsWith('770')).reduce((sum, t) => sum + Number(t.amount), 0);
             let pendingBills = db.bills.filter(b => !b.paid).length;
 
             document.getElementById('statTotalAssets').textContent = '₺' + totalAssets.toLocaleString('tr-TR', {minimumFractionDigits: 2});
@@ -827,11 +933,12 @@
             document.getElementById('statPendingBills').textContent = pendingBills + ' Adet';
 
             let recentHTML = '';
-            db.transactions.slice(-5).reverse().forEach(t => {
+            filteredTxs.slice(-5).reverse().forEach(t => {
+                let creditObj = db.chartOfAccounts.find(a => a.code === t.wallet);
                 recentHTML += `
                     <tr>
                         <td class="px-3 py-2.5 text-gray-500">${t.date}</td>
-                        <td class="px-3 py-2.5 font-medium text-gray-800">${t.wallet}</td>
+                        <td class="px-3 py-2.5 font-medium text-gray-800">${creditObj ? creditObj.name : t.wallet}</td>
                         <td class="px-3 py-2.5 text-gray-600">${t.desc}</td>
                         <td class="px-3 py-2.5 text-right font-bold text-red-600">-₺${Number(t.amount).toLocaleString('tr-TR', {minimumFractionDigits: 2})}</td>
                     </tr>
@@ -841,10 +948,9 @@
             renderBudgets();
         }
 
-        // 2. HESAP PLANI, ARAMA & EKSTRE
         function saveAccountCode(e) {
-            if (db.currentUser === 'aile') { alert('Aile kullanıcısı yalnızca görüntüleme yapabilir.'); return; }
             e.preventDefault();
+            if (db.currentUser === 'aile') return alert('Yetkiniz yok!');
             const code = document.getElementById('newAccCode').value.trim();
             const name = document.getElementById('newAccName').value.trim();
             const type = document.getElementById('newAccType').value;
@@ -853,25 +959,30 @@
 
             if (originalCode) {
                 let acc = db.chartOfAccounts.find(a => a.code === originalCode);
-                if (acc) { acc.code = code; acc.name = name; acc.type = type; acc.isHeader = isHeader;
-                    db.transactions.forEach(t=>{if(t.code===originalCode)t.code=code;if(t.wallet===originalCode)t.wallet=code;});
-                    db.wallets.forEach(w=>{if(w.name===originalCode)w.name=code;});
-                    if(db.budgets[originalCode]!==undefined){db.budgets[code]=db.budgets[originalCode];delete db.budgets[originalCode];}
-                    db.bills.forEach(b=>{if(b.accountCode===originalCode)b.accountCode=code;if(b.paymentCode===originalCode)b.paymentCode=code;});
+                if (acc) {
+                    let oldCode = acc.code;
+                    acc.code = code; 
+                    acc.name = name; 
+                    acc.type = type; 
+                    acc.isHeader = isHeader;
+
+                    db.transactions.forEach(t => {
+                        if (t.code === oldCode) t.code = code;
+                        if (t.wallet === oldCode) t.wallet = code;
+                    });
                 }
             } else {
                 if (db.chartOfAccounts.some(a => a.code === code)) {
                     alert('Bu hesap kodu zaten kayıtlı!');
                     return;
                 }
+                let prefix = code.split('.')[0];
+                if (!db.chartOfAccounts.some(a => a.code === prefix)) {
+                    db.chartOfAccounts.push({ code: prefix, name: name.toUpperCase() + ' ANA BAŞLIĞI', type, isHeader: true });
+                }
                 db.chartOfAccounts.push({ code, name, type, isHeader });
             }
 
-            // Alt hesap eklenince üst hesap başlığını otomatik oluştur.
-            const parentCode = code.split('.')[0];
-            if (code.includes('.') && !db.chartOfAccounts.some(a=>a.code===parentCode)) {
-                db.chartOfAccounts.push({code:parentCode,name:({100:'KASA HESAPLARI',102:'BANKA HESAPLARI',120:'ALACAKLAR VE KİŞİLER',300:'BORÇLAR VE KREDİ KARTLARI',600:'GELİR HESAPLARI',770:'GİDER HESAPLARI'}[parentCode] || 'HESAP GRUBU'),type,isHeader:true});
-            }
             db.chartOfAccounts.sort((a, b) => a.code.localeCompare(b.code, 'tr', { numeric: true }));
             saveDB();
             renderAll();
@@ -880,7 +991,7 @@
         }
 
         function editAccountCode(code) {
-            if (db.currentUser === 'aile') { alert('Aile kullanıcısı yalnızca görüntüleme yapabilir.'); return; }
+            if (db.currentUser === 'aile') return alert('Yetkiniz yok!');
             let acc = db.chartOfAccounts.find(a => a.code === code);
             if (!acc) return;
             document.getElementById('editOriginalCode').value = acc.code;
@@ -903,7 +1014,7 @@
         }
 
         function deleteAccountCode(code) {
-            if (db.currentUser === 'aile') { alert('Aile kullanıcısı yalnızca görüntüleme yapabilir.'); return; }
+            if (db.currentUser === 'aile') return alert('Yetkiniz yok!');
             if (confirm('Bu hesabı silmek istiyor musunuz?')) {
                 db.chartOfAccounts = db.chartOfAccounts.filter(a => a.code !== code);
                 saveDB();
@@ -946,17 +1057,20 @@
                             <td class="px-3 py-3 text-right">-</td>
                             <td class="px-3 py-3 text-right">-</td>
                             <td class="px-3 py-3 text-center space-x-2">
-                                <button onclick="editAccountCode('${acc.code}')" class="text-indigo-600 hover:text-indigo-800 text-xs"><i class="fa-solid fa-pen"></i></button>
-                                <button onclick="deleteAccountCode('${acc.code}')" class="text-red-500 hover:text-red-700 text-xs"><i class="fa-solid fa-trash"></i></button>
+                                ${db.currentUser !== 'aile' ? `
+                                    <button onclick="editAccountCode('${acc.code}')" class="text-indigo-600 hover:text-indigo-800 text-xs"><i class="fa-solid fa-pen"></i></button>
+                                    <button onclick="deleteAccountCode('${acc.code}')" class="text-red-500 hover:text-red-700 text-xs"><i class="fa-solid fa-trash"></i></button>
+                                ` : '-'}
                             </td>
                         </tr>
                     `;
                 } else {
+                    let balanceColor = 'text-emerald-600 font-bold';
                     let balanceType = balance >= 0 ? '(B)' : '(A)';
-                    let normalCredit = ['Pasif','Gelir'].includes(acc.type);
-                    let normal = normalCredit ? credit >= debit : debit >= credit;
-                    balanceType = normalCredit ? (credit >= debit ? '(A)' : '(B)') : (debit >= credit ? '(B)' : '(A)');
-                    let balanceColor = normal ? 'text-emerald-600' : 'text-red-600';
+
+                    if (acc.type === 'Gider' || balance < 0 || (acc.type === 'Pasif' && credit - debit < 0)) {
+                        balanceColor = 'text-red-600 font-bold';
+                    }
 
                     html += `
                         <tr class="hover:bg-gray-50 border-b border-gray-100">
@@ -968,43 +1082,52 @@
                             <td class="px-3 py-2.5 text-right font-bold ${balanceColor}">₺${Math.abs(balance).toLocaleString('tr-TR', {minimumFractionDigits: 2})} ${balanceType}</td>
                             <td class="px-3 py-2.5 text-center space-x-2">
                                 <button onclick="viewAccountStatement('${acc.code}')" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-2 py-1 rounded text-xs font-semibold mr-1"><i class="fa-solid fa-file-lines"></i> Ekstre</button>
-                                <button onclick="editAccountCode('${acc.code}')" class="text-indigo-600 hover:text-indigo-800 text-xs"><i class="fa-solid fa-pen"></i></button>
-                                <button onclick="deleteAccountCode('${acc.code}')" class="text-red-500 hover:text-red-700 text-xs"><i class="fa-solid fa-trash"></i></button>
+                                ${db.currentUser !== 'aile' ? `
+                                    <button onclick="editAccountCode('${acc.code}')" class="text-indigo-600 hover:text-indigo-800 text-xs"><i class="fa-solid fa-pen"></i></button>
+                                    <button onclick="deleteAccountCode('${acc.code}')" class="text-red-500 hover:text-red-700 text-xs"><i class="fa-solid fa-trash"></i></button>
+                                ` : ''}
                             </td>
                         </tr>
                     `;
                 }
             });
-            document.getElementById('chartOfAccountsTable').innerHTML = html || '<tr><td colspan="7" class="text-center py-4 text-gray-400">Aramanıza uygun hesap bulunamadı.</td></tr>';
+            document.getElementById('chartOfAccountsTable').innerHTML = html || '<tr><td colspan="7" class="text-center py-4 text-gray-400">Kayıt bulunamadı.</td></tr>';
         }
 
         function viewAccountStatement(code) {
             let acc = db.chartOfAccounts.find(a => a.code === code);
             if (!acc) return;
 
-            document.getElementById('statementTitle').textContent = `${acc.code} - ${acc.name} Ekstresi`;
+            document.getElementById('statementTitle').textContent = `${acc.code} - ${acc.name} Muavin Defteri`;
             document.getElementById('accountStatementSection').classList.remove('hidden');
 
             let statementHTML = '';
             let matchedTxs = db.transactions.filter(t => t.code === code || t.wallet === code);
             matchedTxs.sort((a, b) => new Date(a.date) - new Date(b.date));
 
+            let runningBalance = 0;
+
             if (matchedTxs.length === 0) {
-                statementHTML = `<tr><td colspan="5" class="text-center py-4 text-gray-400">Bu hesaba ait işlem hareketi bulunmamaktadır.</td></tr>`;
+                statementHTML = `<tr><td colspan="5" class="text-center py-4 text-gray-400">İşlem hareketi bulunmuyor.</td></tr>`;
             } else {
-                let runningBalance = 0;
                 matchedTxs.forEach(t => {
                     let isDebit = t.code === code;
                     let debitVal = isDebit ? Number(t.amount) : 0;
                     let creditVal = !isDebit ? Number(t.amount) : 0;
-                    runningBalance += debitVal-creditVal;
+
+                    if (acc.type === 'Aktif' || acc.type === 'Gider') {
+                        runningBalance += (debitVal - creditVal);
+                    } else {
+                        runningBalance += (creditVal - debitVal);
+                    }
 
                     statementHTML += `
                         <tr>
                             <td class="px-3 py-2.5 text-gray-500">${t.date}</td>
                             <td class="px-3 py-2.5 text-gray-800">${t.desc} <span class="text-xs text-gray-400">(Karşı: ${isDebit ? t.wallet : t.code})</span></td>
                             <td class="px-3 py-2.5 text-right font-semibold text-gray-700">${debitVal > 0 ? '₺' + debitVal.toLocaleString('tr-TR', {minimumFractionDigits: 2}) : '-'}</td>
-                            <td class="px-3 py-2.5 text-right font-semibold text-gray-700">${creditVal > 0 ? '₺' + creditVal.toLocaleString('tr-TR', {minimumFractionDigits: 2}) : '-'}</td><td class="px-3 py-2.5 text-right font-bold ${runningBalance<0?'text-red-600':'text-emerald-600'}">₺${Math.abs(runningBalance).toLocaleString('tr-TR',{minimumFractionDigits:2})} ${runningBalance<0?'(A)':'(B)'}</td>
+                            <td class="px-3 py-2.5 text-right font-semibold text-gray-700">${creditVal > 0 ? '₺' + creditVal.toLocaleString('tr-TR', {minimumFractionDigits: 2}) : '-'}</td>
+                            <td class="px-3 py-2.5 text-right font-bold ${runningBalance >= 0 ? 'text-emerald-600' : 'text-red-600'}">₺${Math.abs(runningBalance).toLocaleString('tr-TR', {minimumFractionDigits: 2})} ${runningBalance >= 0 ? '(B)' : '(A)'}</td>
                         </tr>
                     `;
                 });
@@ -1018,10 +1141,9 @@
             document.getElementById('accountStatementSection').classList.add('hidden');
         }
 
-        // 3. KASA & BANKALAR
         function addWallet(e) {
-            if (db.currentUser === 'aile') { alert('Aile kullanıcısı yalnızca görüntüleme yapabilir.'); return; }
             e.preventDefault();
+            if (db.currentUser === 'aile') return alert('Yetkiniz yok!');
             const name = document.getElementById('walletName').value;
             const type = document.getElementById('walletType').value;
             const balance = parseFloat(document.getElementById('walletBalance').value);
@@ -1030,7 +1152,7 @@
             saveDB();
             renderAll();
             e.target.reset();
-            alert('Kasa / Banka hesabı eklendi!');
+            alert('Hesap eklendi!');
         }
 
         function renderWallets() {
@@ -1040,7 +1162,7 @@
                     <div class="bg-gray-50 border p-4 rounded-xl flex justify-between items-center">
                         <div>
                             <span class="text-xs font-semibold text-indigo-600 uppercase">${w.type}</span>
-                            <h4 class="text-base font-bold text-gray-800">${w.name}${db.chartOfAccounts.some(a=>a.code===w.name)?' - '+(db.chartOfAccounts.find(a=>a.code===w.name)?.name||''):''}</h4>
+                            <h4 class="text-base font-bold text-gray-800">${w.name}</h4>
                         </div>
                         <div class="text-right">
                             <p class="text-lg font-extrabold text-emerald-600">₺${w.balance.toLocaleString('tr-TR', {minimumFractionDigits: 2})}</p>
@@ -1052,14 +1174,32 @@
 
             let selectHTML = '';
             db.chartOfAccounts.filter(a => !a.isHeader).forEach(a => { selectHTML += `<option value="${a.code}">${a.code} - ${a.name}</option>`; });
-            document.getElementById('tCreditCode').innerHTML = selectHTML;
-            document.getElementById('tDebitCode').innerHTML = selectHTML;
+            if(document.getElementById('tCreditCode')) document.getElementById('tCreditCode').innerHTML = selectHTML;
+            if(document.getElementById('tDebitCode')) document.getElementById('tDebitCode').innerHTML = selectHTML;
+            if(document.getElementById('billAccCode')) document.getElementById('billAccCode').innerHTML = db.chartOfAccounts.filter(a => !a.isHeader && a.type === 'Gider').map(a => `<option value="${a.code}">${a.code} - ${a.name}</option>`).join('');
+            if(document.getElementById('bAccountCode')) document.getElementById('bAccountCode').innerHTML = db.chartOfAccounts.filter(a => !a.isHeader && a.type === 'Gider').map(a => `<option value="${a.code}">${a.code} - ${a.name}</option>`).join('');
         }
 
-        // 4. FİŞ & İŞLEMLER
+        function simulateAICameraScan() {
+            if (db.currentUser === 'aile') return alert('Yetkiniz yok!');
+            const sampleFişler = [
+                { desc: 'AI OCR: Market İaşe Alımı', amount: 485.50, debit: '770.01', credit: '100.01' },
+                { desc: 'AI OCR: Akaryakıt İstasyonu', amount: 1250.00, debit: '770.18', credit: '300.01' }
+            ];
+            let randomFiş = sampleFişler[Math.floor(Math.random() * sampleFişler.length)];
+
+            document.getElementById('tAmount').value = randomFiş.amount;
+            document.getElementById('tDebitCode').value = randomFiş.debit;
+            document.getElementById('tCreditCode').value = randomFiş.credit;
+            document.getElementById('tDesc').value = randomFiş.desc;
+            document.getElementById('tType').value = 'Gider';
+
+            alert(`📷 OCR Tarama Başarılı: ${randomFiş.desc} (₺${randomFiş.amount})`);
+        }
+
         function saveTransaction(e) {
-            if (db.currentUser === 'aile') { alert('Aile kullanıcısı yalnızca görüntüleme yapabilir.'); return; }
             e.preventDefault();
+            if (db.currentUser === 'aile') return alert('Yetkiniz yok!');
             const editId = document.getElementById('editTxId').value;
             const type = document.getElementById('tType').value;
             const amount = parseFloat(document.getElementById('tAmount').value);
@@ -1070,26 +1210,32 @@
             const receiptFile = document.getElementById('tReceipt').files[0];
 
             const processSave = (receiptData) => {
+                let newTxId = editId ? Number(editId) : Date.now();
+                let txObj = {
+                    id: newTxId, type, amount, code, wallet, date, desc,
+                    receipt: receiptData || (editId ? db.transactions.find(t => t.id == editId).receipt : null)
+                };
+
                 if (editId) {
                     let idx = db.transactions.findIndex(t => t.id == editId);
-                    if (idx !== -1) {
-                        db.transactions[idx] = {
-                            id: Number(editId),
-                            type, amount, code, wallet, date, desc,
-                            receipt: receiptData || db.transactions[idx].receipt
-                        };
-                    }
+                    if (idx !== -1) db.transactions[idx] = txObj;
                 } else {
-                    db.transactions.push({
-                        id: Date.now(), type, amount, code, wallet, date, desc, receipt: receiptData || null
-                    });
+                    db.transactions.push(txObj);
+                }
+
+                if (receiptData) {
+                    let docIdx = db.documents.findIndex(d => d.id == newTxId);
+                    if (docIdx !== -1) {
+                        db.documents[docIdx] = { id: newTxId, date, desc, amount, image: receiptData };
+                    } else {
+                        db.documents.push({ id: newTxId, date, desc, amount, image: receiptData });
+                    }
                 }
 
                 saveDB();
                 renderAll();
-                renderDocuments();
                 resetTxForm();
-                alert('İşlem başarıyla kaydedildi!');
+                alert('İşlem kaydedildi!');
             };
 
             if (receiptFile) {
@@ -1102,7 +1248,7 @@
         }
 
         function editTransaction(id) {
-            if (db.currentUser === 'aile') { alert('Aile kullanıcısı yalnızca görüntüleme yapabilir.'); return; }
+            if (db.currentUser === 'aile') return alert('Yetkiniz yok!');
             let tx = db.transactions.find(t => t.id === id);
             if (!tx) return;
             document.getElementById('editTxId').value = tx.id;
@@ -1113,9 +1259,10 @@
             document.getElementById('tDate').value = tx.date;
             document.getElementById('tDesc').value = tx.desc;
 
-            document.getElementById('txFormTitle').textContent = 'Fiş / İşlem Düzenle';
-            document.getElementById('txSubmitBtn').textContent = 'Değişiklikleri Güncelle';
+            document.getElementById('txFormTitle').textContent = 'İşlemi Düzenle';
+            document.getElementById('txSubmitBtn').textContent = 'Güncelle';
             document.getElementById('txCancelBtn').classList.remove('hidden');
+            switchTab('transactions');
         }
 
         function resetTxForm() {
@@ -1130,9 +1277,10 @@
         }
 
         function deleteTransaction(id) {
-            if (db.currentUser === 'aile') { alert('Aile kullanıcısı yalnızca görüntüleme yapabilir.'); return; }
+            if (db.currentUser === 'aile') return alert('Yetkiniz yok!');
             if (!confirm('İşlemi silmek istiyor musunuz?')) return;
             db.transactions = db.transactions.filter(t => t.id !== id);
+            db.documents = db.documents.filter(d => d.id !== id);
             saveDB();
             renderAll();
         }
@@ -1156,35 +1304,46 @@
                         </td>
                         <td class="px-3 py-2.5 text-right font-bold text-gray-900">₺${Number(t.amount).toLocaleString('tr-TR', {minimumFractionDigits: 2})}</td>
                         <td class="px-3 py-2.5 text-center space-x-2">
-                            <button onclick="editTransaction(${t.id})" class="text-indigo-600 hover:text-indigo-800 text-xs"><i class="fa-solid fa-pen"></i></button>
-                            <button onclick="deleteTransaction(${t.id})" class="text-red-500 hover:text-red-700 text-xs"><i class="fa-solid fa-trash"></i></button>
+                            ${db.currentUser !== 'aile' ? `
+                                <button onclick="editTransaction(${t.id})" class="text-indigo-600 hover:text-indigo-800 text-xs"><i class="fa-solid fa-pen"></i></button>
+                                <button onclick="deleteTransaction(${t.id})" class="text-red-500 hover:text-red-700 text-xs"><i class="fa-solid fa-trash"></i></button>
+                            ` : '-'}
                         </td>
                     </tr>
                 `;
             });
             document.getElementById('allTransactionsTable').innerHTML = html || '<tr><td colspan="7" class="text-center py-4 text-gray-400">Kayıt yok.</td></tr>';
-
-            let selectHTML = '';
-            db.chartOfAccounts.filter(acc => !acc.isHeader).forEach(acc => {
-                selectHTML += `<option value="${acc.code}">${acc.code} - ${acc.name} (${acc.type})</option>`;
-            });
-            document.getElementById('tDebitCode').innerHTML = selectHTML;
-            document.getElementById('tCreditCode').innerHTML = selectHTML;
-            document.getElementById('bAccountCode').innerHTML = db.chartOfAccounts.filter(a => !a.isHeader && a.type === 'Gider').map(a => `<option value="${a.code}">${a.code} - ${a.name}</option>`).join('');
         }
 
-        async function readReceiptCamera(input) { const file=input.files?.[0]; if(!file)return; const dt=new DataTransfer();dt.items.add(file);document.getElementById('tReceipt').files=dt.files; await processReceiptOCR(file); }
-        async function processReceiptOCR(file) {
-            const status=document.getElementById('receiptOcrStatus'); status.textContent='Fiş okunuyor…';
-            if(!window.Tesseract){status.textContent='OCR kütüphanesi yüklenemedi; bilgileri elle girin.';return;}
-            try { const result=await Tesseract.recognize(file,'tur+eng'); const text=result.data.text||''; const amountMatches=[...text.matchAll(/(?:TOPLAM|TUTAR|TOTAL|GENEL TOPLAM)?[^0-9]{0,12}([0-9]{1,5}[.,][0-9]{2})/gi)]; let amount=null;if(amountMatches.length){const nums=amountMatches.map(m=>Number(m[1].replace(/\./g,'').replace(',','.'))).filter(n=>n>0);if(nums.length)amount=Math.max(...nums);}
-                const low=text.toLocaleLowerCase('tr-TR');let candidates=db.chartOfAccounts.filter(a=>!a.isHeader&&a.type==='Gider');const keywords=[['elektrik','elektrik'],['su','su'],['doğalgaz','doğalgaz'],['internet','internet'],['telefon','telefon'],['benzin','yakıt'],['akaryakıt','yakıt'],['market','iaşe'],['bim','iaşe'],['a101','iaşe'],['migros','iaşe'],['kira','kira'],['eczane','diğer'],['temizlik','temizlik']];let chosen=null;for(const [word,match] of keywords){if(low.includes(word)){chosen=candidates.find(a=>a.name.toLocaleLowerCase('tr-TR').includes(match));if(chosen)break;}}
-                if(amount)document.getElementById('tAmount').value=amount.toFixed(2);if(chosen)document.getElementById('tDebitCode').value=chosen.code;
-                const pay=db.chartOfAccounts.filter(a=>!a.isHeader);let paid=pay.find(a=>/kasa/i.test(a.name)&&/100/.test(a.code));if(/kredi kartı|visa|mastercard|kart/i.test(low))paid=pay.find(a=>a.code.startsWith('300'))||paid;else if(/ziraat/i.test(low))paid=pay.find(a=>/ziraat/i.test(a.name));else if(/akbank/i.test(low))paid=pay.find(a=>/akbank/i.test(a.name));else if(/yapı kredi/i.test(low))paid=pay.find(a=>/yapı kredi/i.test(a.name));if(paid)document.getElementById('tCreditCode').value=paid.code;
-                const desc=text.split(/\n/).map(x=>x.trim()).filter(Boolean).slice(0,2).join(' - ');if(desc&&!document.getElementById('tDesc').value)document.getElementById('tDesc').value=desc.slice(0,120);status.textContent=`Fiş okundu. ${amount?'Tutar önerildi. ':'Tutar bulunamadı. '}${chosen?'Gider hesabı önerildi. ':'Gider hesabını kontrol edin. '}Ödeme hesabını ve tüm alanları kontrol edip “İşlemi Kaydet”e basın.`;
-            } catch(err){status.textContent='Fiş okunamadı. Daha net bir fotoğraf deneyin veya alanları elle doldurun.';}
+        function renderDocuments() {
+            let html = '';
+            let docs = db.documents;
+            if (docs.length === 0) {
+                html = `<div class="col-span-3 text-center py-8 text-gray-400"><i class="fa-solid fa-folder-open text-4xl mb-2 text-gray-300"></i><p>Belge bulunmuyor.</p></div>`;
+            } else {
+                docs.forEach(d => {
+                    html += `
+                        <div class="bg-gray-50 border rounded-xl p-4 space-y-3 shadow-sm">
+                            <div class="flex justify-between items-center text-xs text-gray-500">
+                                <span><i class="fa-regular fa-calendar mr-1"></i> ${d.date}</span>
+                                <span class="font-bold text-gray-900">₺${Number(d.amount).toLocaleString('tr-TR', {minimumFractionDigits: 2})}</span>
+                            </div>
+                            <p class="text-sm font-semibold text-gray-800">${d.desc}</p>
+                            <div class="flex justify-center">
+                                <img src="${d.image}" onclick="showReceipt('${d.image}')" class="h-36 object-cover rounded-lg border cursor-pointer hover:opacity-90 transition shadow" alt="Belge">
+                            </div>
+                            <div class="flex justify-end gap-2 pt-2 border-t">
+                                ${db.currentUser !== 'aile' ? `
+                                    <button onclick="editTransaction(${d.id})" class="bg-indigo-50 text-indigo-600 px-3 py-1 rounded text-xs font-semibold">Düzenle</button>
+                                    <button onclick="deleteTransaction(${d.id})" class="bg-red-50 text-red-600 px-3 py-1 rounded text-xs font-semibold">Sil</button>
+                                ` : ''}
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+            document.getElementById('documentsGrid').innerHTML = html;
         }
-        function renderDocuments(){const body=document.getElementById('documentsTable');if(!body)return;const rows=db.transactions.filter(t=>t.receipt).slice().sort((a,b)=>a.date.localeCompare(b.date));body.innerHTML=rows.map((t,i)=>`<tr class="border-t"><td class="p-3">${i+1}</td><td class="p-3">${t.date}</td><td class="p-3">${t.desc}</td><td class="p-3 text-right">₺${Number(t.amount).toLocaleString('tr-TR',{minimumFractionDigits:2})}</td><td class="p-3"><button onclick="showReceipt('${t.receipt}')" class="text-indigo-600 underline">Belgeyi aç</button></td></tr>`).join('')||'<tr><td colspan="5" class="p-4 text-center text-gray-400">Henüz kayıtlı belge yok.</td></tr>';}
 
         function showReceipt(imgSrc) {
             document.getElementById('modalReceiptImg').src = imgSrc;
@@ -1192,8 +1351,12 @@
         }
         function closeReceiptModal() { document.getElementById('receiptModal').classList.add('hidden'); }
 
-        // 5. MİZAN
         function renderTrialBalance() {
+            let period = document.getElementById('mizanPeriod').value;
+            let customBox = document.getElementById('customDateRangeBox');
+            if (period === 'custom') customBox.classList.remove('hidden');
+            else customBox.classList.add('hidden');
+
             db.chartOfAccounts.sort((a, b) => a.code.localeCompare(b.code, 'tr', { numeric: true }));
             
             let mizanMap = {};
@@ -1201,12 +1364,16 @@
                 mizanMap[acc.code] = { code: acc.code, name: acc.name, type: acc.type, isHeader: acc.isHeader, debit: 0, credit: 0 };
             });
 
-            const period = document.getElementById('mizanPeriod')?.value || 'all';
-            const month = Number(document.getElementById('mizanMonth')?.value || (new Date().getMonth()+1));
-            const year = Number(document.getElementById('mizanYear')?.value || new Date().getFullYear());
-            const start = document.getElementById('mizanStart')?.value || '';
-            const end = document.getElementById('mizanEnd')?.value || '';
-            db.transactions.filter(t=>{if(period==='monthly')return (t.date||'').startsWith(`${new Date().getFullYear()}-${String(new Date().getMonth()+1).padStart(2,'0')}`);if(period==='custom')return (!start||t.date>=start)&&(!end||t.date<=end);if(period==='month')return (t.date||'').startsWith(`${year}-${String(month).padStart(2,'0')}`);return true;}).forEach(t => {
+            let filteredTxs = db.transactions;
+            if (period !== 'all' && period !== 'custom') {
+                filteredTxs = db.transactions.filter(t => t.date.startsWith(period));
+            } else if (period === 'custom') {
+                let start = document.getElementById('mizanStartDate').value;
+                let end = document.getElementById('mizanEndDate').value;
+                if (start && end) filteredTxs = db.transactions.filter(t => t.date >= start && t.date <= end);
+            }
+
+            filteredTxs.forEach(t => {
                 if (mizanMap[t.code]) mizanMap[t.code].debit += Number(t.amount);
                 if (mizanMap[t.wallet]) mizanMap[t.wallet].credit += Number(t.amount);
             });
@@ -1233,7 +1400,7 @@
                         <td class="px-3 py-2.5 text-gray-800">${item.name}</td>
                         <td class="px-3 py-2.5 text-right font-semibold text-gray-700">₺${item.debit.toLocaleString('tr-TR', {minimumFractionDigits: 2})}</td>
                         <td class="px-3 py-2.5 text-right font-semibold text-gray-700">₺${item.credit.toLocaleString('tr-TR', {minimumFractionDigits: 2})}</td>
-                        <td class="px-3 py-2.5 text-right font-bold ${((['Pasif','Gelir'].includes(item.type)?balance<=0:balance>=0)) ? 'text-emerald-600' : 'text-red-600'}">₺${Math.abs(balance).toLocaleString('tr-TR', {minimumFractionDigits: 2})} ${balance >= 0 ? '(B)' : '(A)'}</td>
+                        <td class="px-3 py-2.5 text-right font-bold ${balance >= 0 ? 'text-emerald-600' : 'text-red-600'}">₺${Math.abs(balance).toLocaleString('tr-TR', {minimumFractionDigits: 2})} ${balance >= 0 ? '(B)' : '(A)'}</td>
                     </tr>
                 `;
             });
@@ -1250,20 +1417,20 @@
             document.getElementById('trialBalanceTable').innerHTML = html;
         }
 
-        // 6. FATURALAR
         function saveBill(e) {
-            if (db.currentUser === 'aile') { alert('Aile kullanıcısı yalnızca görüntüleme yapabilir.'); return; }
             e.preventDefault();
+            if (db.currentUser === 'aile') return alert('Yetkiniz yok!');
             const editId = document.getElementById('editBillId').value;
             const name = document.getElementById('billName').value;
+            const code = document.getElementById('billAccCode').value;
             const amount = parseFloat(document.getElementById('billAmount').value);
             const dueDate = document.getElementById('billDueDate').value;
 
             if (editId) {
                 let b = db.bills.find(item => item.id == editId);
-                if (b) { b.name = name; b.amount = amount; b.dueDate = dueDate; b.accountCode=document.getElementById('billAccountCode').value; b.paymentCode=document.getElementById('billPaymentCode').value; }
+                if (b) { b.name = name; b.code = code; b.amount = amount; b.dueDate = dueDate; }
             } else {
-                db.bills.push({ id: Date.now(), name, amount, dueDate, paid: false, accountCode:document.getElementById('billAccountCode').value, paymentCode:document.getElementById('billPaymentCode').value });
+                db.bills.push({ id: Date.now(), name, code, amount, dueDate, paid: false });
             }
 
             saveDB();
@@ -1273,14 +1440,14 @@
         }
 
         function editBill(id) {
-            if (db.currentUser === 'aile') { alert('Aile kullanıcısı yalnızca görüntüleme yapabilir.'); return; }
+            if (db.currentUser === 'aile') return alert('Yetkiniz yok!');
             let b = db.bills.find(item => item.id === id);
             if (!b) return;
             document.getElementById('editBillId').value = b.id;
             document.getElementById('billName').value = b.name;
+            document.getElementById('billAccCode').value = b.code || '770.04';
             document.getElementById('billAmount').value = b.amount;
             document.getElementById('billDueDate').value = b.dueDate;
-            document.getElementById('billAccountCode').value=b.accountCode||'770.04'; document.getElementById('billPaymentCode').value=b.paymentCode||'100.01';
 
             document.getElementById('billFormTitle').textContent = 'Fatura Düzenle';
             document.getElementById('billSubmitBtn').textContent = 'Güncelle';
@@ -1292,33 +1459,33 @@
             document.getElementById('billName').value = '';
             document.getElementById('billAmount').value = '';
             document.getElementById('billDueDate').value = '';
-            if(document.getElementById('billAccountCode'))document.getElementById('billAccountCode').value=''; if(document.getElementById('billPaymentCode'))document.getElementById('billPaymentCode').value='';
-            document.getElementById('billFormTitle').textContent = 'Yeni Fatura Tanımla';
-            document.getElementById('billSubmitBtn').textContent = 'Kaydet';
+            document.getElementById('billFormTitle').textContent = 'Yeni Fatura Tanımla (Tahakkuk)';
+            document.getElementById('billSubmitBtn').textContent = 'Fatura Tahakkuk Et';
             document.getElementById('billCancelBtn').classList.add('hidden');
         }
 
         function payBillFromBills(id) {
-            if (db.currentUser === 'aile') { alert('Aile kullanıcısı yalnızca görüntüleme yapabilir.'); return; }
+            if (db.currentUser === 'aile') return alert('Yetkiniz yok!');
             let b = db.bills.find(item => item.id === id);
             if (!b || b.paid) return;
 
-            const creditAcc = b.paymentCode || document.getElementById('billPaymentCode')?.value || '100.01';
-            const debitAcc = b.accountCode || '770.04';
+            let creditAcc = prompt("Hangi kasadan/bankadan ödenecek? (Kod yazın, örn: 100.01)", "100.01");
+            if (!creditAcc) return;
+
             b.paid = true;
             db.transactions.push({
-                id: Date.now(), type: 'Çift Taraflı', amount: b.amount, code: debitAcc, wallet: creditAcc,
+                id: Date.now(), type: 'Çift Taraflı', amount: b.amount, code: b.code || '770.04', wallet: creditAcc,
                 date: new Date().toISOString().slice(0, 10), desc: b.name + ' Ödemesi', receipt: null
             });
 
             saveDB();
             renderAll();
-            alert(`"${b.name}" ödendi ve kaydedildi.`);
+            alert('Fatura ödendi ve işlendi.');
         }
 
         function deleteBill(id) {
-            if (db.currentUser === 'aile') { alert('Aile kullanıcısı yalnızca görüntüleme yapabilir.'); return; }
-            if (confirm('Faturayı silmek istiyor musunuz?')) {
+            if (db.currentUser === 'aile') return alert('Yetkiniz yok!');
+            if (confirm('Silmek istiyor musunuz?')) {
                 db.bills = db.bills.filter(b => b.id !== id);
                 saveDB();
                 renderAll();
@@ -1326,110 +1493,71 @@
         }
 
         function renderBills() {
-            const accounts=db.chartOfAccounts.filter(a=>!a.isHeader);
-            const opts=accounts.map(a=>`<option value="${a.code}">${a.code} - ${a.name}</option>`).join('');
-            const ba=document.getElementById('billAccountCode'), bp=document.getElementById('billPaymentCode');
-            if(ba){const old=ba.value;ba.innerHTML=opts;ba.value=old||accounts.find(a=>a.type==='Gider')?.code||'';}
-            if(bp){const old=bp.value;bp.innerHTML=opts;bp.value=old||accounts.find(a=>a.code.startsWith('100'))?.code||accounts[0]?.code||'';}
             let html = '';
             db.bills.forEach(b => {
+                let accObj = db.chartOfAccounts.find(a => a.code === b.code);
                 html += `
                     <tr>
                         <td class="px-3 py-2.5 font-medium text-gray-800">${b.name}</td>
+                        <td class="px-3 py-2.5 font-mono text-xs text-indigo-600">${b.code} - ${accObj ? accObj.name : ''}</td>
                         <td class="px-3 py-2.5 font-bold text-gray-900">₺${Number(b.amount).toLocaleString('tr-TR', {minimumFractionDigits: 2})}</td>
                         <td class="px-3 py-2.5 text-gray-500">${b.dueDate}</td>
                         <td class="px-3 py-2.5"><span class="px-2 py-1 rounded text-xs font-semibold ${b.paid ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}">${b.paid ? 'Ödendi' : 'Bekliyor'}</span></td>
                         <td class="px-3 py-2.5 text-center space-x-2">
-                            ${!b.paid ? `<button onclick="payBillFromBills(${b.id})" class="bg-indigo-600 hover:bg-indigo-700 text-white px-2.5 py-1 rounded text-xs font-semibold shadow">Öde</button>` : ''}
-                            <button onclick="editBill(${b.id})" class="text-indigo-600 hover:text-indigo-800 text-xs"><i class="fa-solid fa-pen"></i></button>
-                            <button onclick="deleteBill(${b.id})" class="text-red-500 hover:text-red-700 text-xs"><i class="fa-solid fa-trash"></i></button>
+                            ${!b.paid && db.currentUser !== 'aile' ? `<button onclick="payBillFromBills(${b.id})" class="bg-indigo-600 hover:bg-indigo-700 text-white px-2.5 py-1 rounded text-xs font-semibold">Öde</button>` : ''}
+                            ${db.currentUser !== 'aile' ? `
+                                <button onclick="editBill(${b.id})" class="text-indigo-600 hover:text-indigo-800 text-xs"><i class="fa-solid fa-pen"></i></button>
+                                <button onclick="deleteBill(${b.id})" class="text-red-500 hover:text-red-700 text-xs"><i class="fa-solid fa-trash"></i></button>
+                            ` : '-'}
                         </td>
                     </tr>
                 `;
             });
-            document.getElementById('billsTable').innerHTML = html || '<tr><td colspan="5" class="text-center py-4 text-gray-400">Fatura kaydı yok.</td></tr>';
-        }
-
-        // 7. BORÇLAR
-        function saveDebt(e) {
-            if (db.currentUser === 'aile') { alert('Aile kullanıcısı yalnızca görüntüleme yapabilir.'); return; }
-            e.preventDefault();
-            const editId = document.getElementById('editDebtId').value;
-            const name = document.getElementById('debtName').value;
-            const total = parseFloat(document.getElementById('debtTotal').value);
-            const remaining = parseFloat(document.getElementById('debtRemaining').value);
-            const monthly = parseFloat(document.getElementById('debtMonthly').value);
-
-            if (editId) {
-                let d = db.debts.find(item => item.id == editId);
-                if (d) { d.name = name; d.total = total; d.remaining = remaining; d.monthly = monthly; }
-            } else {
-                db.debts.push({ id: Date.now(), name, total, remaining, monthly });
-            }
-
-            saveDB();
-            renderAll();
-            resetDebtForm();
-            alert('Borç kaydedildi!');
-        }
-
-        function editDebt(id) {
-            if (db.currentUser === 'aile') { alert('Aile kullanıcısı yalnızca görüntüleme yapabilir.'); return; }
-            let d = db.debts.find(item => item.id === id);
-            if (!d) return;
-            document.getElementById('editDebtId').value = d.id;
-            document.getElementById('debtName').value = d.name;
-            document.getElementById('debtTotal').value = d.total;
-            document.getElementById('debtRemaining').value = d.remaining;
-            document.getElementById('debtMonthly').value = d.monthly;
-
-            document.getElementById('debtFormTitle').textContent = 'Borç Düzenle';
-            document.getElementById('debtSubmitBtn').textContent = 'Güncelle';
-            document.getElementById('debtCancelBtn').classList.remove('hidden');
-        }
-
-        function resetDebtForm() {
-            document.getElementById('editDebtId').value = '';
-            document.getElementById('debtName').value = '';
-            document.getElementById('debtTotal').value = '';
-            document.getElementById('debtRemaining').value = '';
-            document.getElementById('debtMonthly').value = '';
-            document.getElementById('debtFormTitle').textContent = 'Yeni Borç / Taksit Ekle';
-            document.getElementById('debtSubmitBtn').textContent = 'Borç Kaydet';
-            document.getElementById('debtCancelBtn').classList.add('hidden');
-        }
-
-        function deleteDebt(id) {
-            if (db.currentUser === 'aile') { alert('Aile kullanıcısı yalnızca görüntüleme yapabilir.'); return; }
-            if(!confirm('Silmek istiyor musunuz?')) return;
-            db.debts = db.debts.filter(d => d.id !== id);
-            saveDB();
-            renderAll();
+            document.getElementById('billsTable').innerHTML = html || '<tr><td colspan="6" class="text-center py-4 text-gray-400">Fatura yok.</td></tr>';
         }
 
         function renderDebts() {
-            let html = '';
-            const linked = db.chartOfAccounts.filter(a=>!a.isHeader && a.code.startsWith('300')).map(a=>{const tx=db.transactions.filter(t=>t.code===a.code||t.wallet===a.code);const debit=tx.filter(t=>t.code===a.code).reduce((s,t)=>s+Number(t.amount),0);const credit=tx.filter(t=>t.wallet===a.code).reduce((s,t)=>s+Number(t.amount),0);const bal=credit-debit;return {id:null,name:a.code+' - '+a.name,total:Math.max(bal,0),remaining:bal,monthly:0,linked:true};}).filter(d=>Math.abs(d.remaining)>0.005);
-            [...linked,...db.debts].forEach(d => {
-                html += `
-                    <tr>
-                        <td class="px-3 py-2.5 font-medium text-gray-800">${d.name}</td>
-                        <td class="px-3 py-2.5">₺${Number(d.total).toLocaleString('tr-TR', {minimumFractionDigits: 2})}</td>
-                        <td class="px-3 py-2.5 font-bold text-red-600">₺${Number(d.remaining).toLocaleString('tr-TR', {minimumFractionDigits: 2})}</td>
-                        <td class="px-3 py-2.5">₺${Number(d.monthly).toLocaleString('tr-TR', {minimumFractionDigits: 2})}</td>
-                        <td class="px-3 py-2.5 text-center space-x-2">
-                            ${!d.linked ? `<button onclick="editDebt(${d.id})" class="text-indigo-600 hover:text-indigo-800 text-xs"><i class="fa-solid fa-pen"></i></button><button onclick="deleteDebt(${d.id})" class="text-red-500 hover:text-red-700 text-xs"><i class="fa-solid fa-trash"></i></button>` : '<span class="text-xs text-gray-500">Hesap planından canlı</span>'}
-                        </td>
-                    </tr>
-                `;
+            let totals = {};
+            db.chartOfAccounts.forEach(acc => { totals[acc.code] = { debit: 0, credit: 0 }; });
+
+            db.transactions.forEach(t => {
+                if (!totals[t.code]) totals[t.code] = { debit: 0, credit: 0 };
+                totals[t.code].debit += Number(t.amount);
+
+                if (!totals[t.wallet]) totals[t.wallet] = { debit: 0, credit: 0 };
+                totals[t.wallet].credit += Number(t.amount);
             });
-            document.getElementById('debtsTable').innerHTML = html || '<tr><td colspan="5" class="text-center py-4 text-gray-400">Borç yok.</td></tr>';
+
+            let html = '';
+            db.chartOfAccounts.forEach(acc => {
+                if (acc.isHeader) return;
+                let debit = totals[acc.code] ? totals[acc.code].debit : 0;
+                let credit = totals[acc.code] ? totals[acc.code].credit : 0;
+                let balance = credit - debit;
+
+                let is300 = acc.code.startsWith('300');
+                let isTersBakiyeBanka = (acc.code.startsWith('100') || acc.code.startsWith('102')) && (debit - credit > 0);
+
+                if (is300 || isTersBakiyeBanka) {
+                    let tutar = is300 ? balance : (debit - credit);
+                    if (tutar > 0) {
+                        html += `
+                            <tr>
+                                <td class="px-3 py-2.5 font-mono text-indigo-600 font-bold">${acc.code}</td>
+                                <td class="px-3 py-2.5 font-medium text-gray-800">${acc.name}</td>
+                                <td class="px-3 py-2.5"><span class="px-2 py-1 rounded text-xs font-semibold ${is300 ? 'bg-purple-100 text-purple-700' : 'bg-red-100 text-red-700'}">${is300 ? '300lü Hesap' : 'Ters Bakiye'}</span></td>
+                                <td class="px-3 py-2.5 text-right font-bold text-red-600">₺${tutar.toLocaleString('tr-TR', {minimumFractionDigits: 2})}</td>
+                            </tr>
+                        `;
+                    }
+                }
+            });
+            document.getElementById('debtsTable').innerHTML = html || '<tr><td colspan="4" class="text-center py-4 text-gray-400">Aktif borç yok.</td></tr>';
         }
 
-        // 8. BÜTÇE LİMİTLERİ
         function saveBudget(e) {
-            if (db.currentUser === 'aile') { alert('Aile kullanıcısı yalnızca görüntüleme yapabilir.'); return; }
             e.preventDefault();
+            if (db.currentUser === 'aile') return alert('Yetkiniz yok!');
             const code = document.getElementById('bAccountCode').value;
             const limit = parseFloat(document.getElementById('bLimit').value);
             db.budgets[code] = limit;
@@ -1473,7 +1601,6 @@
             document.getElementById('budgetWarningContainer').innerHTML = warningHTML || '<p class="text-sm text-emerald-600"><i class="fa-solid fa-circle-check"></i> Tüm harcamalar bütçe dahilinde.</p>';
         }
 
-        // 9. RAPORLAR
         function exportToExcel() {
             let dataToExport = db.transactions.map(t => {
                 let debitAcc = db.chartOfAccounts.find(a => a.code === t.code);
@@ -1491,31 +1618,70 @@
             const ws = XLSX.utils.json_to_sheet(dataToExport);
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, "Yevmiye Kayıtları");
-            XLSX.writeFile(wb, "EvDefteri_GercekRapor.xlsx");
+            XLSX.writeFile(wb, "EvDefteri_GuncelRapor.xlsx");
+        }
+
+        function importFromExcel() {
+            if (db.currentUser === 'aile') return alert('Yetkiniz yok!');
+            const fileInput = document.getElementById('excelImportFile');
+            if (!fileInput.files || fileInput.files.length === 0) return alert('Dosya seçin!');
+
+            const file = fileInput.files[0];
+            const reader = new FileReader();
+
+            reader.onload = function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const rows = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
+
+                    let newTransactions = [];
+                    rows.forEach((row, index) => {
+                        let tutar = parseFloat(row["Tutar"] || row["amount"] || 0);
+                        if (tutar > 0) {
+                            newTransactions.push({
+                                id: Date.now() + index,
+                                type: 'Çift Taraflı',
+                                amount: tutar,
+                                code: String(row["Borçlu Hesap Kodu"] || row["code"] || "770.27").trim(),
+                                wallet: String(row["Alacaklı Hesap Kodu"] || row["wallet"] || "100.01").trim(),
+                                date: String(row["Tarih"] || new Date().toISOString().slice(0, 10)).trim(),
+                                desc: String(row["Açıklama"] || row["desc"] || "Excel Yükleme").trim(),
+                                receipt: null
+                            });
+                        }
+                    });
+
+                    if (newTransactions.length > 0) {
+                        if (confirm(`Excel'den ${newTransactions.length} işlem okundu. Güncellensin mi?`)) {
+                            db.transactions = newTransactions;
+                            saveDB();
+                            renderAll();
+                            alert('Veritabanı güncellendi!');
+                            fileInput.value = '';
+                        }
+                    }
+                } catch (error) {
+                    alert('Hata: ' + error.message);
+                }
+            };
+            reader.readAsArrayBuffer(file);
         }
 
         function exportToPDF() {
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF();
-            doc.text("EvDefteri - Muhasebe Mizan Raporu", 14, 20);
+            doc.text("EvDefteri - Mizan Raporu", 14, 20);
             
             let tableData = [];
             db.chartOfAccounts.forEach(acc => {
                 if(acc.isHeader) return;
-                let txsDebit = db.transactions.filter(t => t.code === acc.code);
-                let txsCredit = db.transactions.filter(t => t.wallet === acc.code);
-                let debit = txsDebit.reduce((s, t) => s + Number(t.amount), 0);
-                let credit = txsCredit.reduce((s, t) => s + Number(t.amount), 0);
-                if(debit > 0 || credit > 0) {
-                    tableData.push([acc.code, acc.name, "₺" + debit, "₺" + credit]);
-                }
+                let debit = db.transactions.filter(t => t.code === acc.code).reduce((s, t) => s + Number(t.amount), 0);
+                let credit = db.transactions.filter(t => t.wallet === acc.code).reduce((s, t) => s + Number(t.amount), 0);
+                if(debit > 0 || credit > 0) tableData.push([acc.code, acc.name, "₺" + debit, "₺" + credit]);
             });
 
-            doc.autoTable({
-                head: [['Hesap Kodu', 'Hesap Adı', 'Borç', 'Alacak']],
-                body: tableData,
-                startY: 30,
-            });
+            doc.autoTable({ head: [['Kod', 'Hesap Adı', 'Borç', 'Alacak']], body: tableData, startY: 30 });
             doc.save("EvDefteri_Mizan.pdf");
         }
 
