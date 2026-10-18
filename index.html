@@ -10,6 +10,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- SheetJS (Excel Export) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <!-- jsPDF (PDF Export) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
@@ -25,6 +26,7 @@
             }
         }
     </script>
+<style>.family-readonly #tab-chartofaccounts form,.family-readonly #tab-accounts form,.family-readonly #tab-transactions form,.family-readonly #tab-bills form,.family-readonly #tab-debts form,.family-readonly #tab-budgets form{display:none!important}.family-readonly #chartOfAccountsTable button:not([onclick^="viewAccountStatement"]),.family-readonly #allTransactionsTable button,.family-readonly #billsTable button,.family-readonly #debtsTable button{display:none!important}</style>
 </head>
 <body class="bg-gray-50 text-gray-800 font-sans antialiased">
 
@@ -115,10 +117,12 @@
                 <button onclick="switchTab('reports')" id="btn-reports" class="tab-btn px-4 py-2 font-medium text-sm rounded-lg bg-white text-gray-600 hover:bg-gray-100 transition whitespace-nowrap">
                     <i class="fa-solid fa-file-arrow-down mr-2"></i> Raporlar
                 </button>
+                <button onclick="switchTab('documents')" id="btn-documents" class="tab-btn px-4 py-2 font-medium text-sm rounded-lg bg-white text-gray-600 hover:bg-gray-100 transition whitespace-nowrap"><i class="fa-solid fa-folder-open mr-2"></i> Belgeler</button>
             </div>
 
             <!-- 1. DASHBOARD -->
             <div id="tab-dashboard" class="tab-content space-y-6">
+                <div class="flex flex-wrap items-center gap-3 bg-white p-4 rounded-xl border"><label class="text-sm font-semibold">Özet dönemi</label><select id="dashboardPeriod" onchange="renderDashboard()" class="p-2 border rounded-lg text-sm"><option value="month">Güncel Ay</option><option value="previous">Önceki Ay</option><option value="all">Genel Toplam</option></select></div>
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                     <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between">
                         <div>
@@ -248,7 +252,7 @@
                                     <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Tarih</th>
                                     <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">İşlem / Açıklama</th>
                                     <th class="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Borç (₺)</th>
-                                    <th class="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Alacak (₺)</th>
+                                    <th class="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Alacak (₺)</th><th class="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Bakiye (₺)</th>
                                 </tr>
                             </thead>
                             <tbody id="accountStatementTable" class="divide-y divide-gray-200 text-sm"></tbody>
@@ -325,7 +329,7 @@
                         </div>
                         <div class="md:col-span-2">
                             <label class="block text-xs font-medium text-gray-600 mb-1">Fiş / Fatura Görseli (İsteğe Bağlı)</label>
-                            <input type="file" id="tReceipt" accept="image/*" class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700">
+                            <div class="flex flex-wrap gap-2 items-center"><input type="file" id="tReceipt" accept="image/*,.pdf" class="flex-1 min-w-48 text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700"><label class="bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded-lg text-sm font-semibold cursor-pointer"><i class="fa-solid fa-camera mr-1"></i> Kameraya Okut<input id="cameraReceipt" type="file" accept="image/*" capture="environment" class="hidden" onchange="readReceiptCamera(this)"></label></div><p id="receiptOcrStatus" class="text-xs text-gray-500 mt-2">Fiş görüntüsü seçebilir veya kamerayla çekebilirsiniz. Okunan alanları kontrol edip onaylayın.</p>
                         </div>
                         <div class="md:col-span-3 flex justify-end gap-2">
                             <button type="button" onclick="resetTxForm()" id="txCancelBtn" class="hidden bg-gray-300 hover:bg-gray-400 text-gray-700 font-semibold px-4 py-2.5 rounded-lg text-sm">İptal</button>
@@ -368,7 +372,8 @@
                             <select id="mizanPeriod" onchange="renderTrialBalance()" class="p-2 border rounded-lg text-sm bg-gray-50">
                                 <option value="all" selected>Genel Mizan (Tüm Zamanlar)</option>
                                 <option value="monthly">Aylık Mizan (Bu Ay)</option>
-                            </select>
+                                <option value="custom">İki Tarih Arası</option>
+                            </select><select id="mizanMonth" onchange="renderTrialBalance()" class="p-2 border rounded-lg text-sm"><option value="1">Ocak</option><option value="2">Şubat</option><option value="3">Mart</option><option value="4">Nisan</option><option value="5">Mayıs</option><option value="6">Haziran</option><option value="7">Temmuz</option><option value="8">Ağustos</option><option value="9" selected>Eylül</option><option value="10">Ekim</option><option value="11">Kasım</option><option value="12">Aralık</option></select><input type="number" id="mizanYear" value="2026" min="2000" max="2100" onchange="renderTrialBalance()" class="p-2 border rounded-lg text-sm w-24"><input type="date" id="mizanStart" onchange="renderTrialBalance()" class="p-2 border rounded-lg text-sm"><input type="date" id="mizanEnd" onchange="renderTrialBalance()" class="p-2 border rounded-lg text-sm">
                         </div>
                     </div>
                     <div class="overflow-x-auto">
@@ -406,6 +411,8 @@
                             <label class="block text-xs font-medium text-gray-600 mb-1">Son Ödeme Tarihi</label>
                             <input type="date" id="billDueDate" required class="w-full p-2.5 border rounded-lg text-sm">
                         </div>
+                        <div><label class="block text-xs font-medium text-gray-600 mb-1">Tahakkuk Hesabı</label><select id="billAccountCode" class="w-full p-2.5 border rounded-lg text-sm bg-gray-50"></select></div>
+                        <div><label class="block text-xs font-medium text-gray-600 mb-1">Ödeme Hesabı</label><select id="billPaymentCode" class="w-full p-2.5 border rounded-lg text-sm bg-gray-50"></select></div>
                         <div class="flex items-end gap-2">
                             <button type="submit" id="billSubmitBtn" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 rounded-lg text-sm shadow">Kaydet</button>
                             <button type="button" onclick="resetBillForm()" id="billCancelBtn" class="hidden bg-gray-300 hover:bg-gray-400 text-gray-700 px-3 py-2.5 rounded-lg text-sm font-semibold">İptal</button>
@@ -504,6 +511,9 @@
                     <div id="budgetGrid" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
                 </div>
             </div>
+
+            <!-- BELGELER -->
+            <div id="tab-documents" class="tab-content hidden space-y-6"><div class="bg-white p-6 rounded-xl shadow-sm border"><h3 class="text-lg font-bold mb-3">Belgeler Arşivi</h3><p class="text-sm text-gray-500 mb-4">Fiş ve faturalar kayıt sırasına göre burada saklanır.</p><div class="overflow-x-auto"><table class="min-w-full"><thead><tr class="bg-gray-50"><th class="p-3 text-left">Sıra</th><th class="p-3 text-left">Tarih</th><th class="p-3 text-left">Belge / Açıklama</th><th class="p-3 text-right">Tutar</th><th class="p-3 text-left">Belge</th></tr></thead><tbody id="documentsTable"></tbody></table></div></div></div>
 
             <!-- 9. RAPORLAR -->
             <div id="tab-reports" class="tab-content hidden space-y-6">
@@ -768,7 +778,9 @@
             }
             document.getElementById('loginSection').classList.add('hidden');
             document.getElementById('appSection').classList.remove('hidden');
-            document.getElementById('currentUserDisplay').innerHTML = `<i class="fa-solid fa-user-check mr-1 text-indigo-600"></i> ${db.currentUser.toUpperCase()}`;
+            document.getElementById('currentUserDisplay').innerHTML = `<i class="fa-solid fa-user-check mr-1 text-indigo-600"></i> ${db.currentUser.toUpperCase()}${db.currentUser==='aile'?' · SADECE GÖRÜNTÜLEME':''}`;
+            document.body.classList.toggle('family-readonly', db.currentUser === 'aile');
+            document.querySelectorAll('#tab-chartofaccounts form,#tab-accounts form,#tab-transactions form,#tab-bills form,#tab-debts form,#tab-budgets form').forEach(el=>{ if(db.currentUser==='aile') el.classList.add('hidden'); else el.classList.remove('hidden'); });
             
             document.getElementById('tDate').valueAsDate = new Date();
             renderAll();
@@ -796,13 +808,17 @@
             renderBills();
             renderDebts();
             renderBudgets();
+            renderDocuments();
         }
 
         // 1. DASHBOARD
         function renderDashboard() {
             let totalAssets = db.wallets.reduce((sum, w) => sum + Number(w.balance), 0);
-            let monthlyIncome = db.transactions.filter(t => t.code === '600.01' || t.wallet === '600.01').reduce((sum, t) => sum + Number(t.amount), 0);
-            let monthlyExpense = db.transactions.filter(t => t.code.startsWith('770')).reduce((sum, t) => sum + Number(t.amount), 0);
+            const period = document.getElementById('dashboardPeriod')?.value || 'month';
+            const now = new Date(); const selectedMonth = new Date(now.getFullYear(), now.getMonth()-(period==='previous'?1:0),1);
+            const periodTx = db.transactions.filter(t=>period==='all' || (t.date||'').startsWith(`${selectedMonth.getFullYear()}-${String(selectedMonth.getMonth()+1).padStart(2,'0')}`));
+            let monthlyIncome = periodTx.filter(t => (db.chartOfAccounts.find(a=>a.code===t.code)?.type==='Gelir') || (db.chartOfAccounts.find(a=>a.code===t.wallet)?.type==='Gelir')).reduce((sum, t) => sum + Number(t.amount), 0);
+            let monthlyExpense = periodTx.filter(t => db.chartOfAccounts.find(a=>a.code===t.code)?.type==='Gider').reduce((sum, t) => sum + Number(t.amount), 0);
             let pendingBills = db.bills.filter(b => !b.paid).length;
 
             document.getElementById('statTotalAssets').textContent = '₺' + totalAssets.toLocaleString('tr-TR', {minimumFractionDigits: 2});
@@ -827,6 +843,7 @@
 
         // 2. HESAP PLANI, ARAMA & EKSTRE
         function saveAccountCode(e) {
+            if (db.currentUser === 'aile') { alert('Aile kullanıcısı yalnızca görüntüleme yapabilir.'); return; }
             e.preventDefault();
             const code = document.getElementById('newAccCode').value.trim();
             const name = document.getElementById('newAccName').value.trim();
@@ -836,7 +853,12 @@
 
             if (originalCode) {
                 let acc = db.chartOfAccounts.find(a => a.code === originalCode);
-                if (acc) { acc.code = code; acc.name = name; acc.type = type; acc.isHeader = isHeader; }
+                if (acc) { acc.code = code; acc.name = name; acc.type = type; acc.isHeader = isHeader;
+                    db.transactions.forEach(t=>{if(t.code===originalCode)t.code=code;if(t.wallet===originalCode)t.wallet=code;});
+                    db.wallets.forEach(w=>{if(w.name===originalCode)w.name=code;});
+                    if(db.budgets[originalCode]!==undefined){db.budgets[code]=db.budgets[originalCode];delete db.budgets[originalCode];}
+                    db.bills.forEach(b=>{if(b.accountCode===originalCode)b.accountCode=code;if(b.paymentCode===originalCode)b.paymentCode=code;});
+                }
             } else {
                 if (db.chartOfAccounts.some(a => a.code === code)) {
                     alert('Bu hesap kodu zaten kayıtlı!');
@@ -845,6 +867,11 @@
                 db.chartOfAccounts.push({ code, name, type, isHeader });
             }
 
+            // Alt hesap eklenince üst hesap başlığını otomatik oluştur.
+            const parentCode = code.split('.')[0];
+            if (code.includes('.') && !db.chartOfAccounts.some(a=>a.code===parentCode)) {
+                db.chartOfAccounts.push({code:parentCode,name:({100:'KASA HESAPLARI',102:'BANKA HESAPLARI',120:'ALACAKLAR VE KİŞİLER',300:'BORÇLAR VE KREDİ KARTLARI',600:'GELİR HESAPLARI',770:'GİDER HESAPLARI'}[parentCode] || 'HESAP GRUBU'),type,isHeader:true});
+            }
             db.chartOfAccounts.sort((a, b) => a.code.localeCompare(b.code, 'tr', { numeric: true }));
             saveDB();
             renderAll();
@@ -853,6 +880,7 @@
         }
 
         function editAccountCode(code) {
+            if (db.currentUser === 'aile') { alert('Aile kullanıcısı yalnızca görüntüleme yapabilir.'); return; }
             let acc = db.chartOfAccounts.find(a => a.code === code);
             if (!acc) return;
             document.getElementById('editOriginalCode').value = acc.code;
@@ -875,6 +903,7 @@
         }
 
         function deleteAccountCode(code) {
+            if (db.currentUser === 'aile') { alert('Aile kullanıcısı yalnızca görüntüleme yapabilir.'); return; }
             if (confirm('Bu hesabı silmek istiyor musunuz?')) {
                 db.chartOfAccounts = db.chartOfAccounts.filter(a => a.code !== code);
                 saveDB();
@@ -924,12 +953,10 @@
                     `;
                 } else {
                     let balanceType = balance >= 0 ? '(B)' : '(A)';
-                    let balanceColor = balance >= 0 ? 'text-gray-900' : 'text-emerald-600';
-                    
-                    if (acc.type === 'Pasif') {
-                        balanceType = (credit - debit) >= 0 ? '(A)' : '(B)';
-                        balanceColor = 'text-red-600';
-                    }
+                    let normalCredit = ['Pasif','Gelir'].includes(acc.type);
+                    let normal = normalCredit ? credit >= debit : debit >= credit;
+                    balanceType = normalCredit ? (credit >= debit ? '(A)' : '(B)') : (debit >= credit ? '(B)' : '(A)');
+                    let balanceColor = normal ? 'text-emerald-600' : 'text-red-600';
 
                     html += `
                         <tr class="hover:bg-gray-50 border-b border-gray-100">
@@ -963,19 +990,21 @@
             matchedTxs.sort((a, b) => new Date(a.date) - new Date(b.date));
 
             if (matchedTxs.length === 0) {
-                statementHTML = `<tr><td colspan="4" class="text-center py-4 text-gray-400">Bu hesaba ait işlem hareketi bulunmamaktadır.</td></tr>`;
+                statementHTML = `<tr><td colspan="5" class="text-center py-4 text-gray-400">Bu hesaba ait işlem hareketi bulunmamaktadır.</td></tr>`;
             } else {
+                let runningBalance = 0;
                 matchedTxs.forEach(t => {
                     let isDebit = t.code === code;
                     let debitVal = isDebit ? Number(t.amount) : 0;
                     let creditVal = !isDebit ? Number(t.amount) : 0;
+                    runningBalance += debitVal-creditVal;
 
                     statementHTML += `
                         <tr>
                             <td class="px-3 py-2.5 text-gray-500">${t.date}</td>
                             <td class="px-3 py-2.5 text-gray-800">${t.desc} <span class="text-xs text-gray-400">(Karşı: ${isDebit ? t.wallet : t.code})</span></td>
                             <td class="px-3 py-2.5 text-right font-semibold text-gray-700">${debitVal > 0 ? '₺' + debitVal.toLocaleString('tr-TR', {minimumFractionDigits: 2}) : '-'}</td>
-                            <td class="px-3 py-2.5 text-right font-semibold text-gray-700">${creditVal > 0 ? '₺' + creditVal.toLocaleString('tr-TR', {minimumFractionDigits: 2}) : '-'}</td>
+                            <td class="px-3 py-2.5 text-right font-semibold text-gray-700">${creditVal > 0 ? '₺' + creditVal.toLocaleString('tr-TR', {minimumFractionDigits: 2}) : '-'}</td><td class="px-3 py-2.5 text-right font-bold ${runningBalance<0?'text-red-600':'text-emerald-600'}">₺${Math.abs(runningBalance).toLocaleString('tr-TR',{minimumFractionDigits:2})} ${runningBalance<0?'(A)':'(B)'}</td>
                         </tr>
                     `;
                 });
@@ -991,6 +1020,7 @@
 
         // 3. KASA & BANKALAR
         function addWallet(e) {
+            if (db.currentUser === 'aile') { alert('Aile kullanıcısı yalnızca görüntüleme yapabilir.'); return; }
             e.preventDefault();
             const name = document.getElementById('walletName').value;
             const type = document.getElementById('walletType').value;
@@ -1010,7 +1040,7 @@
                     <div class="bg-gray-50 border p-4 rounded-xl flex justify-between items-center">
                         <div>
                             <span class="text-xs font-semibold text-indigo-600 uppercase">${w.type}</span>
-                            <h4 class="text-base font-bold text-gray-800">${w.name}</h4>
+                            <h4 class="text-base font-bold text-gray-800">${w.name}${db.chartOfAccounts.some(a=>a.code===w.name)?' - '+(db.chartOfAccounts.find(a=>a.code===w.name)?.name||''):''}</h4>
                         </div>
                         <div class="text-right">
                             <p class="text-lg font-extrabold text-emerald-600">₺${w.balance.toLocaleString('tr-TR', {minimumFractionDigits: 2})}</p>
@@ -1028,6 +1058,7 @@
 
         // 4. FİŞ & İŞLEMLER
         function saveTransaction(e) {
+            if (db.currentUser === 'aile') { alert('Aile kullanıcısı yalnızca görüntüleme yapabilir.'); return; }
             e.preventDefault();
             const editId = document.getElementById('editTxId').value;
             const type = document.getElementById('tType').value;
@@ -1056,6 +1087,7 @@
 
                 saveDB();
                 renderAll();
+                renderDocuments();
                 resetTxForm();
                 alert('İşlem başarıyla kaydedildi!');
             };
@@ -1070,6 +1102,7 @@
         }
 
         function editTransaction(id) {
+            if (db.currentUser === 'aile') { alert('Aile kullanıcısı yalnızca görüntüleme yapabilir.'); return; }
             let tx = db.transactions.find(t => t.id === id);
             if (!tx) return;
             document.getElementById('editTxId').value = tx.id;
@@ -1097,6 +1130,7 @@
         }
 
         function deleteTransaction(id) {
+            if (db.currentUser === 'aile') { alert('Aile kullanıcısı yalnızca görüntüleme yapabilir.'); return; }
             if (!confirm('İşlemi silmek istiyor musunuz?')) return;
             db.transactions = db.transactions.filter(t => t.id !== id);
             saveDB();
@@ -1139,6 +1173,19 @@
             document.getElementById('bAccountCode').innerHTML = db.chartOfAccounts.filter(a => !a.isHeader && a.type === 'Gider').map(a => `<option value="${a.code}">${a.code} - ${a.name}</option>`).join('');
         }
 
+        async function readReceiptCamera(input) { const file=input.files?.[0]; if(!file)return; const dt=new DataTransfer();dt.items.add(file);document.getElementById('tReceipt').files=dt.files; await processReceiptOCR(file); }
+        async function processReceiptOCR(file) {
+            const status=document.getElementById('receiptOcrStatus'); status.textContent='Fiş okunuyor…';
+            if(!window.Tesseract){status.textContent='OCR kütüphanesi yüklenemedi; bilgileri elle girin.';return;}
+            try { const result=await Tesseract.recognize(file,'tur+eng'); const text=result.data.text||''; const amountMatches=[...text.matchAll(/(?:TOPLAM|TUTAR|TOTAL|GENEL TOPLAM)?[^0-9]{0,12}([0-9]{1,5}[.,][0-9]{2})/gi)]; let amount=null;if(amountMatches.length){const nums=amountMatches.map(m=>Number(m[1].replace(/\./g,'').replace(',','.'))).filter(n=>n>0);if(nums.length)amount=Math.max(...nums);}
+                const low=text.toLocaleLowerCase('tr-TR');let candidates=db.chartOfAccounts.filter(a=>!a.isHeader&&a.type==='Gider');const keywords=[['elektrik','elektrik'],['su','su'],['doğalgaz','doğalgaz'],['internet','internet'],['telefon','telefon'],['benzin','yakıt'],['akaryakıt','yakıt'],['market','iaşe'],['bim','iaşe'],['a101','iaşe'],['migros','iaşe'],['kira','kira'],['eczane','diğer'],['temizlik','temizlik']];let chosen=null;for(const [word,match] of keywords){if(low.includes(word)){chosen=candidates.find(a=>a.name.toLocaleLowerCase('tr-TR').includes(match));if(chosen)break;}}
+                if(amount)document.getElementById('tAmount').value=amount.toFixed(2);if(chosen)document.getElementById('tDebitCode').value=chosen.code;
+                const pay=db.chartOfAccounts.filter(a=>!a.isHeader);let paid=pay.find(a=>/kasa/i.test(a.name)&&/100/.test(a.code));if(/kredi kartı|visa|mastercard|kart/i.test(low))paid=pay.find(a=>a.code.startsWith('300'))||paid;else if(/ziraat/i.test(low))paid=pay.find(a=>/ziraat/i.test(a.name));else if(/akbank/i.test(low))paid=pay.find(a=>/akbank/i.test(a.name));else if(/yapı kredi/i.test(low))paid=pay.find(a=>/yapı kredi/i.test(a.name));if(paid)document.getElementById('tCreditCode').value=paid.code;
+                const desc=text.split(/\n/).map(x=>x.trim()).filter(Boolean).slice(0,2).join(' - ');if(desc&&!document.getElementById('tDesc').value)document.getElementById('tDesc').value=desc.slice(0,120);status.textContent=`Fiş okundu. ${amount?'Tutar önerildi. ':'Tutar bulunamadı. '}${chosen?'Gider hesabı önerildi. ':'Gider hesabını kontrol edin. '}Ödeme hesabını ve tüm alanları kontrol edip “İşlemi Kaydet”e basın.`;
+            } catch(err){status.textContent='Fiş okunamadı. Daha net bir fotoğraf deneyin veya alanları elle doldurun.';}
+        }
+        function renderDocuments(){const body=document.getElementById('documentsTable');if(!body)return;const rows=db.transactions.filter(t=>t.receipt).slice().sort((a,b)=>a.date.localeCompare(b.date));body.innerHTML=rows.map((t,i)=>`<tr class="border-t"><td class="p-3">${i+1}</td><td class="p-3">${t.date}</td><td class="p-3">${t.desc}</td><td class="p-3 text-right">₺${Number(t.amount).toLocaleString('tr-TR',{minimumFractionDigits:2})}</td><td class="p-3"><button onclick="showReceipt('${t.receipt}')" class="text-indigo-600 underline">Belgeyi aç</button></td></tr>`).join('')||'<tr><td colspan="5" class="p-4 text-center text-gray-400">Henüz kayıtlı belge yok.</td></tr>';}
+
         function showReceipt(imgSrc) {
             document.getElementById('modalReceiptImg').src = imgSrc;
             document.getElementById('receiptModal').classList.remove('hidden');
@@ -1154,7 +1201,12 @@
                 mizanMap[acc.code] = { code: acc.code, name: acc.name, type: acc.type, isHeader: acc.isHeader, debit: 0, credit: 0 };
             });
 
-            db.transactions.forEach(t => {
+            const period = document.getElementById('mizanPeriod')?.value || 'all';
+            const month = Number(document.getElementById('mizanMonth')?.value || (new Date().getMonth()+1));
+            const year = Number(document.getElementById('mizanYear')?.value || new Date().getFullYear());
+            const start = document.getElementById('mizanStart')?.value || '';
+            const end = document.getElementById('mizanEnd')?.value || '';
+            db.transactions.filter(t=>{if(period==='monthly')return (t.date||'').startsWith(`${new Date().getFullYear()}-${String(new Date().getMonth()+1).padStart(2,'0')}`);if(period==='custom')return (!start||t.date>=start)&&(!end||t.date<=end);if(period==='month')return (t.date||'').startsWith(`${year}-${String(month).padStart(2,'0')}`);return true;}).forEach(t => {
                 if (mizanMap[t.code]) mizanMap[t.code].debit += Number(t.amount);
                 if (mizanMap[t.wallet]) mizanMap[t.wallet].credit += Number(t.amount);
             });
@@ -1181,7 +1233,7 @@
                         <td class="px-3 py-2.5 text-gray-800">${item.name}</td>
                         <td class="px-3 py-2.5 text-right font-semibold text-gray-700">₺${item.debit.toLocaleString('tr-TR', {minimumFractionDigits: 2})}</td>
                         <td class="px-3 py-2.5 text-right font-semibold text-gray-700">₺${item.credit.toLocaleString('tr-TR', {minimumFractionDigits: 2})}</td>
-                        <td class="px-3 py-2.5 text-right font-bold ${balance >= 0 ? 'text-gray-900' : 'text-emerald-600'}">₺${Math.abs(balance).toLocaleString('tr-TR', {minimumFractionDigits: 2})} ${balance >= 0 ? '(B)' : '(A)'}</td>
+                        <td class="px-3 py-2.5 text-right font-bold ${((['Pasif','Gelir'].includes(item.type)?balance<=0:balance>=0)) ? 'text-emerald-600' : 'text-red-600'}">₺${Math.abs(balance).toLocaleString('tr-TR', {minimumFractionDigits: 2})} ${balance >= 0 ? '(B)' : '(A)'}</td>
                     </tr>
                 `;
             });
@@ -1200,6 +1252,7 @@
 
         // 6. FATURALAR
         function saveBill(e) {
+            if (db.currentUser === 'aile') { alert('Aile kullanıcısı yalnızca görüntüleme yapabilir.'); return; }
             e.preventDefault();
             const editId = document.getElementById('editBillId').value;
             const name = document.getElementById('billName').value;
@@ -1208,9 +1261,9 @@
 
             if (editId) {
                 let b = db.bills.find(item => item.id == editId);
-                if (b) { b.name = name; b.amount = amount; b.dueDate = dueDate; }
+                if (b) { b.name = name; b.amount = amount; b.dueDate = dueDate; b.accountCode=document.getElementById('billAccountCode').value; b.paymentCode=document.getElementById('billPaymentCode').value; }
             } else {
-                db.bills.push({ id: Date.now(), name, amount, dueDate, paid: false });
+                db.bills.push({ id: Date.now(), name, amount, dueDate, paid: false, accountCode:document.getElementById('billAccountCode').value, paymentCode:document.getElementById('billPaymentCode').value });
             }
 
             saveDB();
@@ -1220,12 +1273,14 @@
         }
 
         function editBill(id) {
+            if (db.currentUser === 'aile') { alert('Aile kullanıcısı yalnızca görüntüleme yapabilir.'); return; }
             let b = db.bills.find(item => item.id === id);
             if (!b) return;
             document.getElementById('editBillId').value = b.id;
             document.getElementById('billName').value = b.name;
             document.getElementById('billAmount').value = b.amount;
             document.getElementById('billDueDate').value = b.dueDate;
+            document.getElementById('billAccountCode').value=b.accountCode||'770.04'; document.getElementById('billPaymentCode').value=b.paymentCode||'100.01';
 
             document.getElementById('billFormTitle').textContent = 'Fatura Düzenle';
             document.getElementById('billSubmitBtn').textContent = 'Güncelle';
@@ -1237,21 +1292,22 @@
             document.getElementById('billName').value = '';
             document.getElementById('billAmount').value = '';
             document.getElementById('billDueDate').value = '';
+            if(document.getElementById('billAccountCode'))document.getElementById('billAccountCode').value=''; if(document.getElementById('billPaymentCode'))document.getElementById('billPaymentCode').value='';
             document.getElementById('billFormTitle').textContent = 'Yeni Fatura Tanımla';
             document.getElementById('billSubmitBtn').textContent = 'Kaydet';
             document.getElementById('billCancelBtn').classList.add('hidden');
         }
 
         function payBillFromBills(id) {
+            if (db.currentUser === 'aile') { alert('Aile kullanıcısı yalnızca görüntüleme yapabilir.'); return; }
             let b = db.bills.find(item => item.id === id);
             if (!b || b.paid) return;
 
-            let creditAcc = prompt("Hangi hesaptan/kasadan ödenecek? (Örn: 100.01 veya 102.01)", "100.01");
-            if (!creditAcc) return;
-
+            const creditAcc = b.paymentCode || document.getElementById('billPaymentCode')?.value || '100.01';
+            const debitAcc = b.accountCode || '770.04';
             b.paid = true;
             db.transactions.push({
-                id: Date.now(), type: 'Çift Taraflı', amount: b.amount, code: '770.04', wallet: creditAcc,
+                id: Date.now(), type: 'Çift Taraflı', amount: b.amount, code: debitAcc, wallet: creditAcc,
                 date: new Date().toISOString().slice(0, 10), desc: b.name + ' Ödemesi', receipt: null
             });
 
@@ -1261,6 +1317,7 @@
         }
 
         function deleteBill(id) {
+            if (db.currentUser === 'aile') { alert('Aile kullanıcısı yalnızca görüntüleme yapabilir.'); return; }
             if (confirm('Faturayı silmek istiyor musunuz?')) {
                 db.bills = db.bills.filter(b => b.id !== id);
                 saveDB();
@@ -1269,6 +1326,11 @@
         }
 
         function renderBills() {
+            const accounts=db.chartOfAccounts.filter(a=>!a.isHeader);
+            const opts=accounts.map(a=>`<option value="${a.code}">${a.code} - ${a.name}</option>`).join('');
+            const ba=document.getElementById('billAccountCode'), bp=document.getElementById('billPaymentCode');
+            if(ba){const old=ba.value;ba.innerHTML=opts;ba.value=old||accounts.find(a=>a.type==='Gider')?.code||'';}
+            if(bp){const old=bp.value;bp.innerHTML=opts;bp.value=old||accounts.find(a=>a.code.startsWith('100'))?.code||accounts[0]?.code||'';}
             let html = '';
             db.bills.forEach(b => {
                 html += `
@@ -1290,6 +1352,7 @@
 
         // 7. BORÇLAR
         function saveDebt(e) {
+            if (db.currentUser === 'aile') { alert('Aile kullanıcısı yalnızca görüntüleme yapabilir.'); return; }
             e.preventDefault();
             const editId = document.getElementById('editDebtId').value;
             const name = document.getElementById('debtName').value;
@@ -1311,6 +1374,7 @@
         }
 
         function editDebt(id) {
+            if (db.currentUser === 'aile') { alert('Aile kullanıcısı yalnızca görüntüleme yapabilir.'); return; }
             let d = db.debts.find(item => item.id === id);
             if (!d) return;
             document.getElementById('editDebtId').value = d.id;
@@ -1336,6 +1400,7 @@
         }
 
         function deleteDebt(id) {
+            if (db.currentUser === 'aile') { alert('Aile kullanıcısı yalnızca görüntüleme yapabilir.'); return; }
             if(!confirm('Silmek istiyor musunuz?')) return;
             db.debts = db.debts.filter(d => d.id !== id);
             saveDB();
@@ -1344,7 +1409,8 @@
 
         function renderDebts() {
             let html = '';
-            db.debts.forEach(d => {
+            const linked = db.chartOfAccounts.filter(a=>!a.isHeader && a.code.startsWith('300')).map(a=>{const tx=db.transactions.filter(t=>t.code===a.code||t.wallet===a.code);const debit=tx.filter(t=>t.code===a.code).reduce((s,t)=>s+Number(t.amount),0);const credit=tx.filter(t=>t.wallet===a.code).reduce((s,t)=>s+Number(t.amount),0);const bal=credit-debit;return {id:null,name:a.code+' - '+a.name,total:Math.max(bal,0),remaining:bal,monthly:0,linked:true};}).filter(d=>Math.abs(d.remaining)>0.005);
+            [...linked,...db.debts].forEach(d => {
                 html += `
                     <tr>
                         <td class="px-3 py-2.5 font-medium text-gray-800">${d.name}</td>
@@ -1352,8 +1418,7 @@
                         <td class="px-3 py-2.5 font-bold text-red-600">₺${Number(d.remaining).toLocaleString('tr-TR', {minimumFractionDigits: 2})}</td>
                         <td class="px-3 py-2.5">₺${Number(d.monthly).toLocaleString('tr-TR', {minimumFractionDigits: 2})}</td>
                         <td class="px-3 py-2.5 text-center space-x-2">
-                            <button onclick="editDebt(${d.id})" class="text-indigo-600 hover:text-indigo-800 text-xs"><i class="fa-solid fa-pen"></i></button>
-                            <button onclick="deleteDebt(${d.id})" class="text-red-500 hover:text-red-700 text-xs"><i class="fa-solid fa-trash"></i></button>
+                            ${!d.linked ? `<button onclick="editDebt(${d.id})" class="text-indigo-600 hover:text-indigo-800 text-xs"><i class="fa-solid fa-pen"></i></button><button onclick="deleteDebt(${d.id})" class="text-red-500 hover:text-red-700 text-xs"><i class="fa-solid fa-trash"></i></button>` : '<span class="text-xs text-gray-500">Hesap planından canlı</span>'}
                         </td>
                     </tr>
                 `;
@@ -1363,6 +1428,7 @@
 
         // 8. BÜTÇE LİMİTLERİ
         function saveBudget(e) {
+            if (db.currentUser === 'aile') { alert('Aile kullanıcısı yalnızca görüntüleme yapabilir.'); return; }
             e.preventDefault();
             const code = document.getElementById('bAccountCode').value;
             const limit = parseFloat(document.getElementById('bLimit').value);
