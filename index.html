@@ -560,7 +560,7 @@
             <div id="tab-reports" class="tab-content hidden space-y-6">
                 <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
                     <h3 class="text-lg font-bold text-gray-800 mb-2">Rapor Dışa Aktarma ve Veri Entegrasyonu</h3>
-                    <p class="text-sm text-gray-500 mb-6">Hesap planı, fiş/işlemler, faturalar, bütçe limitleri, belgeler, kasa/bankalar ve diğer veriler tek bir Excel tam yedeğine alınır. Tam yedek yeniden yüklenerek veriler geri yüklenebilir.</p>
+                    <p class="text-sm text-gray-500 mb-6">Tüm entegre fiş hareketlerini ve mizan özetini Excel veya PDF formatında indirebilir, ayrıca Excel'de yaptığınız güncellemeleri yükleyerek tüm veritabanınızı güncelleyebilirsiniz.</p>
                     
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <!-- Dışa Aktarma -->
@@ -1677,84 +1677,68 @@
             document.getElementById('budgetGrid').innerHTML = html || '<p class="text-gray-400">Henüz bütçe limiti tanımlanmadı.</p>';
             document.getElementById('budgetWarningContainer').innerHTML = warningHTML || `<p class="text-sm text-emerald-600"><i class="fa-solid fa-circle-check"></i> ${monthName} ${year} için bütçe aşımı görünmüyor.</p>`;
         }
-        // Tam yedek: tüm veritabanı alanlarını kayıpsız korur.
         function exportToExcel() {
-            if (typeof XLSX === 'undefined') return alert('Excel kütüphanesi yüklenemedi. İnternet bağlantınızı kontrol edin.');
-            try {
-                const wb = XLSX.utils.book_new();
-                const addSheet = (name, rows) => XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(Array.isArray(rows) ? rows : []), name.slice(0, 31));
-                addSheet('Tam Yedek JSON', [{ veritabani: JSON.stringify(db), yedekSurumu: 1, yedekTarihi: new Date().toISOString() }]);
-                addSheet('Hesap Plani', db.chartOfAccounts || []);
-                addSheet('Fis Islemleri', db.transactions || []);
-                addSheet('Faturalar', db.bills || []);
-                addSheet('Butce Limitleri', Object.entries(db.budgets || {}).map(([hesapKodu, limit]) =>
-                    limit && typeof limit === 'object' && !Array.isArray(limit) ? { hesapKodu, ...limit } : { hesapKodu, limit }));
-                addSheet('Belgeler', db.documents || []);
-                addSheet('Kasa Bankalar', db.wallets || []);
-                const known = new Set(['currentUser','chartOfAccounts','transactions','bills','budgets','documents','wallets']);
-                addSheet('Diger Veriler', Object.keys(db).filter(k => !known.has(k)).map(k => ({ alan: k, jsonDegeri: JSON.stringify(db[k]) })));
-                XLSX.writeFile(wb, 'EvDefteri_Tam_Yedek.xlsx');
-            } catch (err) {
-                console.error(err);
-                alert('Excel yedeği oluşturulamadı: ' + err.message);
-            }
+            let dataToExport = db.transactions.map(t => {
+                let debitAcc = db.chartOfAccounts.find(a => a.code === t.code);
+                let creditAcc = db.chartOfAccounts.find(a => a.code === t.wallet);
+                return {
+                    Tarih: t.date,
+                    "Borçlu Hesap Kodu": t.code,
+                    "Borçlu Hesap Adı": debitAcc ? debitAcc.name : '',
+                    "Alacaklı Hesap Kodu": t.wallet,
+                    "Alacaklı Hesap Adı": creditAcc ? creditAcc.name : '',
+                    Açıklama: t.desc,
+                    Tutar: t.amount
+                };
+            });
+            const ws = XLSX.utils.json_to_sheet(dataToExport);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Yevmiye Kayıtları");
+            XLSX.writeFile(wb, "EvDefteri_GuncelRapor.xlsx");
         }
 
         function importFromExcel() {
             if (db.currentUser === 'aile') return alert('Yetkiniz yok!');
             const fileInput = document.getElementById('excelImportFile');
-            if (!fileInput.files || fileInput.files.length === 0) return alert('Lütfen yedek Excel dosyasını seçin.');
-            if (typeof XLSX === 'undefined') return alert('Excel kütüphanesi yüklenemedi. İnternet bağlantınızı kontrol edin.');
+            if (!fileInput.files || fileInput.files.length === 0) return alert('Dosya seçin!');
+
+            const file = fileInput.files[0];
             const reader = new FileReader();
-            reader.onload = async function(e) {
+
+            reader.onload = function(e) {
                 try {
-                    const workbook = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
-                    let restored = null;
-                    if (workbook.Sheets['Tam Yedek JSON']) {
-                        const rows = XLSX.utils.sheet_to_json(workbook.Sheets['Tam Yedek JSON'], { defval: '' });
-                        const raw = rows[0] && rows[0].veritabani;
-                        if (!raw) throw new Error('Tam Yedek JSON sayfasında veritabanı verisi bulunamadı.');
-                        restored = JSON.parse(String(raw));
-                        if (!restored || typeof restored !== 'object' || !Array.isArray(restored.chartOfAccounts) ||
-                            !Array.isArray(restored.transactions) || !Array.isArray(restored.bills) ||
-                            !Array.isArray(restored.documents) || !restored.budgets || typeof restored.budgets !== 'object') {
-                            throw new Error('Yedek dosyanın yapısı geçerli değil. Mevcut veriler değiştirilmedi.');
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const rows = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
+
+                    let newTransactions = [];
+                    rows.forEach((row, index) => {
+                        let tutar = parseFloat(row["Tutar"] || row["amount"] || 0);
+                        if (tutar > 0) {
+                            newTransactions.push({
+                                id: Date.now() + index,
+                                type: 'Çift Taraflı',
+                                amount: tutar,
+                                code: String(row["Borçlu Hesap Kodu"] || row["code"] || "770.27").trim(),
+                                wallet: String(row["Alacaklı Hesap Kodu"] || row["wallet"] || "100.01").trim(),
+                                date: String(row["Tarih"] || new Date().toISOString().slice(0, 10)).trim(),
+                                desc: String(row["Açıklama"] || row["desc"] || "Excel Yükleme").trim(),
+                                receipt: null
+                            });
                         }
-                    } else {
-                        const sheetName = workbook.Sheets['Fis Islemleri'] ? 'Fis Islemleri' :
-                            (workbook.Sheets['Yevmiye Kayıtları'] ? 'Yevmiye Kayıtları' : workbook.SheetNames[0]);
-                        const rows = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { defval: '' });
-                        if (!rows.length || !(('Borçlu Hesap Kodu' in rows[0]) || ('code' in rows[0]) ||
-                            ('Tutar' in rows[0] && ('Alacaklı Hesap Kodu' in rows[0] || 'wallet' in rows[0]))))
-                            throw new Error('Dosyada tanınan tam yedek veya fiş/işlem tablosu bulunamadı.');
-                        const transactions = rows.map((r, i) => ({
-                            id: r.id !== '' && r.id != null ? r.id : Date.now() + i,
-                            type: r.type || 'Çift Taraflı',
-                            amount: Number(r.amount !== undefined ? r.amount : r['Tutar']),
-                            code: String(r.code !== undefined ? r.code : r['Borçlu Hesap Kodu'] || '').trim(),
-                            wallet: String(r.wallet !== undefined ? r.wallet : r['Alacaklı Hesap Kodu'] || '').trim(),
-                            date: String(r.date !== undefined ? r.date : r['Tarih'] || '').trim(),
-                            desc: String(r.desc !== undefined ? r.desc : r['Açıklama'] || '').trim(),
-                            receipt: r.receipt || null
-                        })).filter(t => t.code && t.wallet && Number.isFinite(t.amount) && t.amount > 0);
-                        if (!transactions.length) throw new Error('Dosyada geçerli işlem satırı bulunamadı.');
-                        restored = { ...db, transactions };
+                    });
+
+                    if (newTransactions.length > 0) {
+                        if (confirm(`Excel'den ${newTransactions.length} işlem okundu. Güncellensin mi?`)) {
+                            db.transactions = newTransactions;
+                            saveDB();
+                            renderAll();
+                            alert('Veritabanı güncellendi!');
+                            fileInput.value = '';
+                        }
                     }
-                    const fullBackup = Boolean(workbook.Sheets['Tam Yedek JSON']);
-                    const msg = fullBackup
-                        ? 'Tam yedek bulundu. Hesap planı, fişler, faturalar, bütçeler, belgeler ve diğer veriler yedekten geri yüklenecek.'
-                        : 'Eski biçimli işlem Excel’i bulundu. Yalnızca fiş hareketleri değiştirilecek; diğer kayıtlar korunacak.';
-                    if (!confirm(msg + '\n\nMevcut veriler yedekteki verilerle değişebilir. Devam etmeden önce mevcut verilerinizi yedeklediğinizden emin olun. Devam edilsin mi?')) return;
-                    restored.currentUser = db.currentUser;
-                    db = restored;
-                    localStorage.setItem('EvDefteriTamGuncelDB_V3', JSON.stringify(db));
-                    await saveDB();
-                    renderAll();
-                    alert('Excel verileri yüklendi ve kaydedildi.');
-                    fileInput.value = '';
                 } catch (error) {
-                    console.error(error);
-                    alert('Excel yüklenemedi. Mevcut veriler korunmuştur.\n' + error.message);
+                    alert('Hata: ' + error.message);
                 }
             };
             reader.readAsArrayBuffer(file);
