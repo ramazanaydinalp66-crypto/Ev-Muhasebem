@@ -135,11 +135,10 @@
                 <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between">
                     <h3 class="text-sm font-bold text-gray-700"><i class="fa-solid fa-filter mr-1 text-indigo-600"></i> Özet Rapor Dönemi</h3>
                     <select id="dashboardPeriodSelect" onchange="renderDashboard()" class="p-2 border rounded-lg text-sm bg-gray-50 font-medium">
-                        <option value="current_month">Güncel Ay (Eylül 2026)</option>
-                        <option value="previous_month">Önceki Ay (Ağustos 2026)</option>
+                        <option value="current_month">Güncel Ay</option>
+                        <option value="previous_month">Önceki Ay</option>
                         <option value="all">Tüm Zamanlar (Genel Toplam)</option>
-                        <option value="2026-08">Ağustos 2026</option>
-                        <option value="2026-09">Eylül 2026</option>
+                        <option value="2026-01">Ocak 2026</option><option value="2026-02">Şubat 2026</option><option value="2026-03">Mart 2026</option><option value="2026-04">Nisan 2026</option><option value="2026-05">Mayıs 2026</option><option value="2026-06">Haziran 2026</option><option value="2026-07">Temmuz 2026</option><option value="2026-08">Ağustos 2026</option><option value="2026-09">Eylül 2026</option><option value="2026-10">Ekim 2026</option><option value="2026-11">Kasım 2026</option><option value="2026-12">Aralık 2026</option>
                     </select>
                 </div>
 
@@ -274,6 +273,7 @@
                                     <th class="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Borç (₺)</th>
                                     <th class="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Alacak (₺)</th>
                                     <th class="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Güncel Bakiye (₺)</th>
+                                    <th class="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">Fiş İşlemi</th>
                                 </tr>
                             </thead>
                             <tbody id="accountStatementTable" class="divide-y divide-gray-200 text-sm"></tbody>
@@ -284,29 +284,8 @@
 
             <!-- 3. KASA & BANKALAR -->
             <div id="tab-accounts" class="tab-content hidden space-y-6">
-                <div id="walletFormCard" class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                    <h3 class="text-lg font-bold text-gray-800 mb-4">Yeni Kasa veya Banka Hesabı Tanımla</h3>
-                    <form onsubmit="addWallet(event)" class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div>
-                            <label class="block text-xs font-medium text-gray-600 mb-1">Hesap Adı</label>
-                            <input type="text" id="walletName" required class="w-full p-2.5 border rounded-lg text-sm" placeholder="Örn: Ziraat Bankası">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-medium text-gray-600 mb-1">Tür</label>
-                            <select id="walletType" class="w-full p-2.5 border rounded-lg text-sm bg-gray-50">
-                                <option value="Kasa">Nakit Kasa</option>
-                                <option value="Banka">Banka</option>
-                                <option value="Kredi Kartı">Kredi Kartı</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-xs font-medium text-gray-600 mb-1">Açılış Bakiyesi (₺)</label>
-                            <input type="number" step="0.01" id="walletBalance" required class="w-full p-2.5 border rounded-lg text-sm" placeholder="0.00">
-                        </div>
-                        <div class="md:col-span-3 flex justify-end">
-                            <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-6 py-2.5 rounded-lg text-sm shadow">Hesap Ekle</button>
-                        </div>
-                    </form>
+                <div id="walletFormCard" class="bg-indigo-50 p-4 rounded-xl border border-indigo-100">
+                    <p class="text-sm text-indigo-900"><i class="fa-solid fa-circle-info mr-2"></i>Kasa ve banka bakiyeleri, Hesap Planı'ndaki 100 ve 102 kodlu hesapların fiş hareketlerinden otomatik hesaplanır. Bu ekranda elle bakiye girilmez.</p>
                 </div>
 
                 <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
@@ -393,7 +372,7 @@
                       <div><label class="block text-xs font-semibold text-gray-600 mb-1">Belge tarihi *</label><input id="docDate" type="date" required class="w-full p-2.5 border rounded-lg"></div>
                       <div><label class="block text-xs font-semibold text-gray-600 mb-1">Tutar (₺) — isteğe bağlı</label><input id="docAmount" type="number" step="0.01" min="0" class="w-full p-2.5 border rounded-lg" placeholder="0,00"></div>
                       <div class="sm:col-span-2 lg:col-span-3"><label class="block text-xs font-semibold text-gray-600 mb-1">Açıklama — isteğe bağlı</label><textarea id="docDesc" rows="2" class="w-full p-2.5 border rounded-lg" placeholder="Belgeyle ilgili notlar..."></textarea></div>
-                      <div class="sm:col-span-2 lg:col-span-3"><label class="block text-xs font-semibold text-gray-600 mb-1">Dosya seçimi <span id="docFileHint" class="font-normal text-gray-400">(PDF, görsel veya diğer belge türleri)</span></label><input id="docFile" type="file" class="w-full text-sm text-gray-600 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-indigo-50 file:text-indigo-700" accept=".pdf,.png,.jpg,.jpeg,.webp,.doc,.docx,.xls,.xlsx,.txt"></div>
+                      <div class="sm:col-span-2 lg:col-span-3"><label class="block text-xs font-semibold text-gray-600 mb-1">Dosya seçimi <span id="docFileHint" class="font-normal text-gray-400">(PDF, görsel veya diğer belge türleri)</span></label><input id="docFile" type="file" class="w-full text-sm text-gray-600 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-indigo-50 file:text-indigo-700" accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt" capture="environment"></div>
                       <div class="sm:col-span-2 lg:col-span-3 flex flex-col sm:flex-row gap-2 sm:justify-end"><button id="docCancelBtn" type="button" onclick="resetDocumentForm()" class="hidden border bg-white text-gray-700 font-semibold px-4 py-2.5 rounded-lg">Düzenlemeyi İptal</button><button id="docSubmitBtn" type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-5 py-2.5 rounded-lg"><i class="fa-solid fa-cloud-arrow-up mr-1"></i> Belgeyi Kaydet</button></div>
                       <p class="sm:col-span-2 lg:col-span-3 text-xs text-amber-700">Not: Çok büyük dosyalar tarayıcı depolama sınırına takılabilir. Kayıt öncesinde dosyanın uygun boyutta olduğundan emin olun.</p>
                     </form>
@@ -532,15 +511,19 @@
             <!-- 9. BÜTÇE LİMİTLERİ -->
             <div id="tab-budgets" class="tab-content hidden space-y-6">
                 <div id="budgetFormCard" class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                    <h3 class="text-lg font-bold text-gray-800 mb-4">Hesap Bazlı Bütçe Limiti Belirle</h3>
-                    <form onsubmit="saveBudget(event)" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <h3 class="text-lg font-bold text-gray-800 mb-2">Aylık Bütçe Limiti Belirle</h3><p class="text-sm text-gray-500 mb-4">Her hesap için tek bir aylık limit belirleyin. Aynı limit seçilen yılın 12 ayının her birinde ayrı ayrı uygulanır; harcamalar aylık hesaplanır.</p>
+                    <form onsubmit="saveBudget(event)" class="grid grid-cols-1 md:grid-cols-4 gap-4">
                         <div>
                             <label class="block text-xs font-medium text-gray-600 mb-1">Gider Hesabı</label>
                             <select id="bAccountCode" class="w-full p-2.5 border rounded-lg text-sm bg-gray-50"></select>
                         </div>
                         <div>
                             <label class="block text-xs font-medium text-gray-600 mb-1">Aylık Limit (₺)</label>
-                            <input type="number" step="0.01" id="bLimit" required class="w-full p-2.5 border rounded-lg text-sm" placeholder="0.00">
+                            <input type="number" step="0.01" min="0" id="bLimit" required class="w-full p-2.5 border rounded-lg text-sm" placeholder="0.00">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-600 mb-1">Bütçe Yılı</label>
+                            <select id="budgetYear" class="w-full p-2.5 border rounded-lg text-sm bg-gray-50"><option>2026</option><option>2027</option><option>2028</option><option>2029</option><option>2030</option></select>
                         </div>
                         <div class="flex items-end">
                             <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 rounded-lg text-sm shadow">Limit Kaydet</button>
@@ -549,7 +532,26 @@
                 </div>
 
                 <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                    <h3 class="text-lg font-bold text-gray-800 mb-4">Limit Durumları</h3>
+                    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-5">
+                        <h3 class="text-lg font-bold text-gray-800">Aylık Bütçe Durumu</h3>
+                        <div class="grid grid-cols-2 gap-3">
+                            <label class="text-sm text-gray-600">Ay
+                                <select id="budgetViewMonth" onchange="renderBudgets()" class="mt-1 w-full p-2 border rounded-lg bg-white">
+                                    <option value="01">Ocak</option><option value="02">Şubat</option><option value="03">Mart</option><option value="04">Nisan</option><option value="05">Mayıs</option><option value="06">Haziran</option><option value="07">Temmuz</option><option value="08">Ağustos</option><option value="09">Eylül</option><option value="10" selected>Ekim</option><option value="11">Kasım</option><option value="12">Aralık</option>
+                                </select>
+                            </label>
+                            <label class="text-sm text-gray-600">Yıl
+                                <select id="budgetViewYear" onchange="renderBudgets()" class="mt-1 w-full p-2 border rounded-lg bg-white"><option>2024</option><option>2025</option><option selected>2026</option><option>2027</option><option>2028</option><option>2029</option><option>2030</option><option>2031</option><option>2032</option><option>2033</option><option>2034</option><option>2035</option></select>
+                            </label>
+                        </div>
+                    </div>
+                    <div id="budgetSummary" class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5"></div>
+                    <div class="mb-6">
+                        <h4 class="font-semibold text-gray-800 mb-3">Giderlere Göre Tek Grafik</h4>
+                        <div id="budgetChart" class="space-y-3"></div>
+                        <div class="flex flex-wrap gap-4 text-xs text-gray-500 mt-4"><span><span class="inline-block w-3 h-3 rounded-sm bg-indigo-500 mr-1"></span>Aylık limit</span><span><span class="inline-block w-3 h-3 rounded-sm bg-emerald-500 mr-1"></span>Harcanan tutar</span></div>
+                    </div>
+                    <h4 class="font-semibold text-gray-800 mb-3">Seçilen Ayın Gider Detayları</h4>
                     <div id="budgetGrid" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
                 </div>
             </div>
@@ -900,6 +902,9 @@
 
             document.getElementById('tDate').valueAsDate = new Date();
             if (document.getElementById('docDate')) document.getElementById('docDate').value = new Date().toISOString().slice(0,10);
+            const budgetYear = document.getElementById('budgetYear'); if (budgetYear) budgetYear.value = db.budgetYear || String(new Date().getFullYear());
+            const budgetViewYear = document.getElementById('budgetViewYear'); if (budgetViewYear) budgetViewYear.value = db.budgetYear || String(new Date().getFullYear());
+            const budgetViewMonth = document.getElementById('budgetViewMonth'); if (budgetViewMonth) budgetViewMonth.value = String(new Date().getMonth() + 1).padStart(2, '0');
             renderAll();
         }
 
@@ -932,13 +937,16 @@
             let period = document.getElementById('dashboardPeriodSelect') ? document.getElementById('dashboardPeriodSelect').value : 'current_month';
             
             let filteredTxs = db.transactions;
-            if (period === 'current_month' || period === '2026-09') {
-                filteredTxs = db.transactions.filter(t => t.date.startsWith('2026-09'));
-            } else if (period === 'previous_month' || period === '2026-08') {
-                filteredTxs = db.transactions.filter(t => t.date.startsWith('2026-08'));
-            }
+            const now = new Date();
+            const currentKey = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+            const prevDate = new Date(now.getFullYear(), now.getMonth()-1, 1);
+            const previousKey = `${prevDate.getFullYear()}-${String(prevDate.getMonth()+1).padStart(2,'0')}`;
+            if (period === 'current_month') filteredTxs = db.transactions.filter(t => String(t.date).startsWith(currentKey));
+            else if (period === 'previous_month') filteredTxs = db.transactions.filter(t => String(t.date).startsWith(previousKey));
+            else if (period !== 'all') filteredTxs = db.transactions.filter(t => String(t.date).startsWith(period));
 
-            let totalAssets = db.wallets.reduce((sum, w) => sum + Number(w.balance), 0);
+            const accountTotals = getAccountTotals();
+            let totalAssets = db.chartOfAccounts.filter(a => !a.isHeader && (a.code.startsWith('100') || a.code.startsWith('102'))).reduce((sum, a) => { const x = accountTotals[a.code] || {debit:0,credit:0}; return sum + x.debit - x.credit; }, 0);
             let monthlyIncome = filteredTxs.filter(t => t.code === '600.01' || t.wallet === '600.01').reduce((sum, t) => sum + Number(t.amount), 0);
             let monthlyExpense = filteredTxs.filter(t => t.code.startsWith('770')).reduce((sum, t) => sum + Number(t.amount), 0);
             let pendingBills = db.bills.filter(b => !b.paid).length;
@@ -956,7 +964,7 @@
                         <td class="px-3 py-2.5 text-gray-500">${t.date}</td>
                         <td class="px-3 py-2.5 font-medium text-gray-800">${creditObj ? creditObj.name : t.wallet}</td>
                         <td class="px-3 py-2.5 text-gray-600">${t.desc}</td>
-                        <td class="px-3 py-2.5 text-right font-bold text-red-600">-₺${Number(t.amount).toLocaleString('tr-TR', {minimumFractionDigits: 2})}</td>
+                        <td class="px-3 py-2.5 text-right font-bold ${String(t.code).startsWith('6') || String(t.wallet).startsWith('6') ? 'text-emerald-600' : (String(t.code).startsWith('7') ? 'text-red-600' : 'text-gray-700')}">${String(t.code).startsWith('6') || String(t.wallet).startsWith('6') ? '+' : (String(t.code).startsWith('7') ? '-' : '')}₺${Number(t.amount).toLocaleString('tr-TR', {minimumFractionDigits: 2})}</td>
                     </tr>
                 `;
             });
@@ -1124,7 +1132,7 @@
             let runningBalance = 0;
 
             if (matchedTxs.length === 0) {
-                statementHTML = `<tr><td colspan="5" class="text-center py-4 text-gray-400">İşlem hareketi bulunmuyor.</td></tr>`;
+                statementHTML = `<tr><td colspan="6" class="text-center py-4 text-gray-400">İşlem hareketi bulunmuyor.</td></tr>`;
             } else {
                 matchedTxs.forEach(t => {
                     let isDebit = t.code === code;
@@ -1144,6 +1152,7 @@
                             <td class="px-3 py-2.5 text-right font-semibold text-gray-700">${debitVal > 0 ? '₺' + debitVal.toLocaleString('tr-TR', {minimumFractionDigits: 2}) : '-'}</td>
                             <td class="px-3 py-2.5 text-right font-semibold text-gray-700">${creditVal > 0 ? '₺' + creditVal.toLocaleString('tr-TR', {minimumFractionDigits: 2}) : '-'}</td>
                             <td class="px-3 py-2.5 text-right font-bold ${runningBalance >= 0 ? 'text-emerald-600' : 'text-red-600'}">₺${Math.abs(runningBalance).toLocaleString('tr-TR', {minimumFractionDigits: 2})} ${runningBalance >= 0 ? '(B)' : '(A)'}</td>
+                            <td class="px-3 py-2.5 text-center">${db.currentUser !== 'aile' ? `<button onclick="editTransaction(${t.id})" class="bg-amber-50 hover:bg-amber-100 text-amber-700 px-2 py-1 rounded text-xs font-semibold"><i class="fa-solid fa-pen mr-1"></i>Fişi Düzelt</button>` : '<span class="text-xs text-gray-400">Yalnızca görüntüleme</span>'}</td>
                         </tr>
                     `;
                 });
@@ -1157,39 +1166,36 @@
             document.getElementById('accountStatementSection').classList.add('hidden');
         }
 
+        function getAccountTotals() {
+            const totals = {};
+            (db.chartOfAccounts || []).forEach(a => totals[a.code] = {debit:0, credit:0});
+            (db.transactions || []).forEach(t => {
+                const amount = Number(t.amount) || 0;
+                if (!totals[t.code]) totals[t.code] = {debit:0, credit:0};
+                if (!totals[t.wallet]) totals[t.wallet] = {debit:0, credit:0};
+                totals[t.code].debit += amount;
+                totals[t.wallet].credit += amount;
+            });
+            return totals;
+        }
+
         function addWallet(e) {
             e.preventDefault();
-            if (db.currentUser === 'aile') return alert('Yetkiniz yok!');
-            const name = document.getElementById('walletName').value;
-            const type = document.getElementById('walletType').value;
-            const balance = parseFloat(document.getElementById('walletBalance').value);
-
-            db.wallets.push({ id: Date.now(), name, type, balance });
-            saveDB();
-            renderAll();
-            e.target.reset();
-            alert('Hesap eklendi!');
+            alert('Kasa ve banka hesapları Hesap Planı sekmesinden yönetilir. Bakiye fişlerden otomatik hesaplanır; elle bakiye girilemez.');
         }
 
         function renderWallets() {
+            const totals = getAccountTotals();
+            const cashBankAccounts = db.chartOfAccounts.filter(a => !a.isHeader && (a.code.startsWith('100') || a.code.startsWith('102')));
             let html = '';
-            db.wallets.forEach(w => {
-                html += `
-                    <div class="bg-gray-50 border p-4 rounded-xl flex justify-between items-center">
-                        <div>
-                            <span class="text-xs font-semibold text-indigo-600 uppercase">${w.type}</span>
-                            <h4 class="text-base font-bold text-gray-800">${w.name}</h4>
-                        </div>
-                        <div class="text-right">
-                            <p class="text-lg font-extrabold text-emerald-600">₺${w.balance.toLocaleString('tr-TR', {minimumFractionDigits: 2})}</p>
-                        </div>
-                    </div>
-                `;
+            cashBankAccounts.forEach(acc => {
+                const t = totals[acc.code] || {debit:0,credit:0};
+                const balance = t.debit - t.credit;
+                const kind = acc.code.startsWith('100') ? 'Kasa' : 'Banka';
+                html += `<div class="bg-white border border-gray-200 p-4 rounded-xl flex justify-between items-center shadow-sm"><div><span class="text-xs font-semibold text-indigo-600 uppercase">${kind} · ${acc.code}</span><h4 class="text-base font-bold text-gray-800">${acc.name}</h4><p class="text-xs text-gray-400 mt-1">Hesap Planı ve fişlerden otomatik</p></div><div class="text-right"><p class="text-lg font-extrabold ${balance >= 0 ? 'text-emerald-600' : 'text-red-600'}">₺${Math.abs(balance).toLocaleString('tr-TR',{minimumFractionDigits:2})}</p><p class="text-xs ${balance >= 0 ? 'text-emerald-600' : 'text-red-600'}">${balance >= 0 ? 'Borç bakiyesi' : 'Alacak / ters bakiye'}</p></div></div>`;
             });
-            document.getElementById('walletsGrid').innerHTML = html;
-
-            let selectHTML = '';
-            db.chartOfAccounts.filter(a => !a.isHeader).forEach(a => { selectHTML += `<option value="${a.code}">${a.code} - ${a.name}</option>`; });
+            document.getElementById('walletsGrid').innerHTML = html || '<p class="text-gray-400">Hesap Planı içinde 100 veya 102 kodlu alt hesap bulunamadı.</p>';
+            const selectHTML = db.chartOfAccounts.filter(a => !a.isHeader).map(a => `<option value="${a.code}">${a.code} - ${a.name}</option>`).join('');
             if(document.getElementById('tCreditCode')) document.getElementById('tCreditCode').innerHTML = selectHTML;
             if(document.getElementById('tDebitCode')) document.getElementById('tDebitCode').innerHTML = selectHTML;
             if(document.getElementById('billAccCode')) document.getElementById('billAccCode').innerHTML = db.chartOfAccounts.filter(a => !a.isHeader && a.type === 'Gider').map(a => `<option value="${a.code}">${a.code} - ${a.name}</option>`).join('');
@@ -1578,52 +1584,94 @@
             document.getElementById('debtsTable').innerHTML = html || '<tr><td colspan="4" class="text-center py-4 text-gray-400">Aktif borç yok.</td></tr>';
         }
 
+        const budgetMonths = ['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
         function saveBudget(e) {
             e.preventDefault();
             if (db.currentUser === 'aile') return alert('Yetkiniz yok!');
             const code = document.getElementById('bAccountCode').value;
             const limit = parseFloat(document.getElementById('bLimit').value);
+            const year = document.getElementById('budgetYear').value || String(new Date().getFullYear());
+            if (!code || !Number.isFinite(limit) || limit < 0) return alert('Hesap ve geçerli aylık limit seçin.');
+            if (!db.budgets || Array.isArray(db.budgets)) db.budgets = {};
             db.budgets[code] = limit;
-            saveDB();
-            renderAll();
-            alert('Limit kaydedildi!');
+            db.budgetYear = year;
+            const viewYear = document.getElementById('budgetViewYear'); if (viewYear) viewYear.value = year;
+            saveDB(); renderAll();
+            alert(`${year} yılı için aylık limit kaydedildi. Aynı limit 12 ayın her birine uygulanır.`);
         }
 
         function renderBudgets() {
-            let html = '';
+            const yearEl = document.getElementById('budgetViewYear');
+            const monthEl = document.getElementById('budgetViewMonth');
+            const year = yearEl ? yearEl.value : (db.budgetYear || String(new Date().getFullYear()));
+            const monthNum = monthEl ? monthEl.value : String(new Date().getMonth() + 1).padStart(2, '0');
+            const monthName = budgetMonths[Number(monthNum) - 1] || 'Ekim';
+            const monthKey = `${year}-${monthNum}`;
+            const totals = {};
+            (db.transactions || []).forEach(t => {
+                if (!String(t.code || '').startsWith('7') || !t.date) return;
+                const key = `${String(t.date).slice(0,7)}|${t.code}`;
+                totals[key] = (totals[key] || 0) + Number(t.amount || 0);
+            });
+
+            const budgets = db.budgets || {};
+            const entries = Object.entries(budgets)
+                .filter(([code, limit]) => db.chartOfAccounts.some(a => a.code === code && !a.isHeader && a.type === 'Gider') && Number(limit) >= 0)
+                .map(([code, limit]) => {
+                    const acc = db.chartOfAccounts.find(a => a.code === code);
+                    const spent = totals[`${monthKey}|${code}`] || 0;
+                    const monthlyLimit = Number(limit) || 0;
+                    return { code, limit: monthlyLimit, acc, spent, exceeded: spent > monthlyLimit, pct: monthlyLimit > 0 ? Math.round(spent / monthlyLimit * 100) : (spent > 0 ? 100 : 0) };
+                });
+
             let warningHTML = '';
+            const totalLimit = entries.reduce((sum, e) => sum + e.limit, 0);
+            const totalSpent = entries.reduce((sum, e) => sum + e.spent, 0);
+            const exceededCount = entries.filter(e => e.exceeded).length;
+            const money = value => `₺${Number(value || 0).toLocaleString('tr-TR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
 
-            for (let code in db.budgets) {
-                let limit = db.budgets[code];
-                let accObj = db.chartOfAccounts.find(a => a.code === code);
-                let spent = db.transactions.filter(t => t.code === code).reduce((sum, t) => sum + Number(t.amount), 0);
-                let percentage = limit > 0 ? Math.min(Math.round((spent / limit) * 100), 100) : 0;
-                let isExceeded = spent > limit;
+            document.getElementById('budgetSummary').innerHTML = `
+                <div class="rounded-lg bg-indigo-50 p-4"><p class="text-xs text-indigo-700 mb-1">Toplam aylık limit</p><p class="text-xl font-bold text-indigo-800">${money(totalLimit)}</p></div>
+                <div class="rounded-lg bg-emerald-50 p-4"><p class="text-xs text-emerald-700 mb-1">Toplam harcama · ${monthName} ${year}</p><p class="text-xl font-bold text-emerald-800">${money(totalSpent)}</p></div>
+                <div class="rounded-lg ${exceededCount ? 'bg-red-50' : 'bg-gray-50'} p-4"><p class="text-xs ${exceededCount ? 'text-red-700' : 'text-gray-600'} mb-1">Limit aşan gider sayısı</p><p class="text-xl font-bold ${exceededCount ? 'text-red-700' : 'text-gray-800'}">${exceededCount}</p></div>`;
 
-                html += `
-                    <div class="bg-gray-50 border p-4 rounded-xl space-y-2">
-                        <div class="flex justify-between items-center">
-                            <span class="font-bold text-gray-800">${code} - ${accObj ? accObj.name : ''}</span>
-                            <span class="text-xs font-semibold ${isExceeded ? 'text-red-600' : 'text-gray-500'}">Harcanan: ₺${spent.toLocaleString()} / Limit: ₺${limit.toLocaleString()}</span>
-                        </div>
-                        <div class="w-full bg-gray-200 rounded-full h-2.5">
-                            <div class="h-2.5 rounded-full ${isExceeded ? 'bg-red-600' : 'bg-indigo-600'}" style="width: ${percentage}%"></div>
-                        </div>
+            const maxValue = Math.max(1, ...entries.map(e => Math.max(e.limit, e.spent)));
+            const chartHTML = entries.map(e => {
+                const limitWidth = Math.max(0, Math.min(100, e.limit / maxValue * 100));
+                const spentWidth = Math.max(0, Math.min(100, e.spent / maxValue * 100));
+                const name = `${e.code} · ${e.acc ? e.acc.name : ''}`;
+                return `<div class="rounded-lg border border-gray-100 p-3">
+                    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 mb-2">
+                        <span class="text-sm font-semibold text-gray-800">${name}</span>
+                        <span class="text-xs ${e.exceeded ? 'text-red-600 font-bold' : 'text-gray-500'}">Harcanan ${money(e.spent)} / Limit ${money(e.limit)} · %${e.pct}</span>
                     </div>
-                `;
+                    <div class="space-y-2">
+                        <div class="flex items-center gap-2"><span class="w-16 text-xs text-gray-500">Limit</span><div class="flex-1 h-3 bg-gray-100 rounded-full overflow-hidden"><div class="h-full bg-indigo-500 rounded-full" style="width:${limitWidth}%"></div></div></div>
+                        <div class="flex items-center gap-2"><span class="w-16 text-xs text-gray-500">Harcama</span><div class="flex-1 h-3 bg-gray-100 rounded-full overflow-hidden"><div class="h-full ${e.exceeded ? 'bg-red-500' : 'bg-emerald-500'} rounded-full" style="width:${spentWidth}%"></div></div></div>
+                    </div>
+                </div>`;
+            }).join('');
+            document.getElementById('budgetChart').innerHTML = chartHTML || '<p class="text-sm text-gray-400">Grafik oluşturmak için önce gider hesaplarına bütçe limiti tanımlayın.</p>';
 
-                if (isExceeded) {
-                    warningHTML += `
-                        <div class="p-3 bg-red-50 border-l-4 border-red-500 text-red-700 text-xs rounded">
-                            <span class="font-bold">Bütçe Aşımı!</span> "${accObj ? accObj.name : code}" hesabında sınır aşıldı!
-                        </div>
-                    `;
-                }
-            }
-            document.getElementById('budgetGrid').innerHTML = html || '<p class="text-gray-400">Bütçe limiti yok.</p>';
-            document.getElementById('budgetWarningContainer').innerHTML = warningHTML || '<p class="text-sm text-emerald-600"><i class="fa-solid fa-circle-check"></i> Tüm harcamalar bütçe dahilinde.</p>';
+            let html = '';
+            entries.forEach(e => {
+                html += `<section class="border rounded-xl overflow-hidden bg-white">
+                    <div class="px-4 py-3 ${e.exceeded ? 'bg-red-50' : 'bg-indigo-50'} border-b">
+                        <h4 class="font-bold text-gray-800">${e.code} · ${e.acc ? e.acc.name : ''}</h4>
+                        <p class="text-sm ${e.exceeded ? 'text-red-700' : 'text-indigo-700'}">${monthName} ${year} · ${e.exceeded ? 'Bütçe limiti aşıldı' : 'Bütçe limiti içinde'}</p>
+                    </div>
+                    <div class="p-4">
+                        <div class="flex items-center justify-between gap-2 mb-2 text-sm"><span>Harcanan</span><strong class="${e.exceeded ? 'text-red-600' : 'text-gray-800'}">${money(e.spent)}</strong></div>
+                        <div class="flex items-center justify-between gap-2 mb-3 text-sm"><span>Aylık limit</span><strong>${money(e.limit)}</strong></div>
+                        <div class="w-full bg-gray-100 rounded-full h-2.5"><div class="h-2.5 rounded-full ${e.exceeded ? 'bg-red-600' : 'bg-emerald-500'}" style="width:${Math.min(e.pct,100)}%"></div></div>
+                        <p class="text-xs text-gray-500 mt-2">Limitin %${e.pct} kullanıldı.</p>
+                    </div>
+                </section>`;
+                if (e.exceeded) warningHTML += `<div class="p-3 bg-red-50 border-l-4 border-red-500 text-red-700 text-xs rounded mb-2"><b>Bütçe aşımı:</b> ${monthName} ${year} · ${e.acc ? e.acc.name : e.code} hesabı.</div>`;
+            });
+            document.getElementById('budgetGrid').innerHTML = html || '<p class="text-gray-400">Henüz bütçe limiti tanımlanmadı.</p>';
+            document.getElementById('budgetWarningContainer').innerHTML = warningHTML || `<p class="text-sm text-emerald-600"><i class="fa-solid fa-circle-check"></i> ${monthName} ${year} için bütçe aşımı görünmüyor.</p>`;
         }
-
         function exportToExcel() {
             let dataToExport = db.transactions.map(t => {
                 let debitAcc = db.chartOfAccounts.find(a => a.code === t.code);
