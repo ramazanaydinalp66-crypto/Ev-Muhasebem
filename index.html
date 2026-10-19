@@ -906,6 +906,10 @@
             const budgetViewYear = document.getElementById('budgetViewYear'); if (budgetViewYear) budgetViewYear.value = db.budgetYear || String(new Date().getFullYear());
             const budgetViewMonth = document.getElementById('budgetViewMonth'); if (budgetViewMonth) budgetViewMonth.value = String(new Date().getMonth() + 1).padStart(2, '0');
             renderAll();
+            // Sayfa yenilendiğinde en son açık olan sekmeye geri dön.
+            const savedTab = localStorage.getItem('EvDefteriSonSekme');
+            const validSavedTab = savedTab && document.getElementById('tab-' + savedTab) && document.getElementById('btn-' + savedTab);
+            switchTab(validSavedTab ? savedTab : 'dashboard');
         }
 
         function switchTab(tabId) {
@@ -919,6 +923,7 @@
             const btn = document.getElementById('btn-' + tabId);
             btn.classList.remove('bg-white', 'text-gray-600', 'hover:bg-gray-100');
             btn.classList.add('bg-indigo-600', 'text-white', 'shadow-sm');
+            try { localStorage.setItem('EvDefteriSonSekme', tabId); } catch (e) { /* Depolama kapalıysa sekme yine açılır. */ }
         }
 
         function renderAll() {
