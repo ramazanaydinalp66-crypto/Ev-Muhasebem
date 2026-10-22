@@ -3,9 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EvDefteri - Ön Muhasebe & Hesap Ekstresi</title>
+    <title>Aydınalp Ailesi - Ön Muhasebe & Hesap Ekstresi</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- SheetJS (Excel Export) -->
@@ -29,10 +30,38 @@
   html{scroll-behavior:smooth} body{padding-bottom:env(safe-area-inset-bottom)}
   button,input,select,textarea{touch-action:manipulation} input,select,textarea{max-width:100%;min-height:42px}
   .tab-btn{flex-shrink:0} .tab-content>div{min-width:0}
-  @media(max-width:640px){header .max-w-7xl{height:auto;min-height:4rem;padding-top:.65rem;padding-bottom:.65rem;gap:.5rem;align-items:flex-start;flex-wrap:wrap}header .text-xl{font-size:1rem}#currentUserDisplay{display:none}.tab-btn{padding:.6rem .8rem;font-size:.78rem}.tab-content .p-6{padding:1rem}.overflow-x-auto{max-width:100%}table{font-size:.8rem}}
+  
+  @media(max-width:640px){
+    header .max-w-7xl{height:auto;min-height:4rem;padding-top:.65rem;padding-bottom:.65rem;gap:.5rem;align-items:flex-start;flex-wrap:wrap}
+    header .text-xl{font-size:1rem}
+    #currentUserDisplay{display:none}
+    .tab-btn{padding:.6rem .8rem;font-size:.78rem}
+    .tab-content .p-6{padding:0.75rem}
+    table th, table td {padding: 0.5rem 0.35rem !important; font-size: 0.7rem !important;}
+  }
+
+  .app-layout{display:flex;gap:1rem;align-items:flex-start;max-width:1600px;margin:0 auto;min-height:calc(100vh - 5.5rem);position:relative}
+  .main-sidebar{width:245px;flex:0 0 245px;position:sticky;top:5.5rem;max-height:calc(100vh - 6rem);overflow-y:auto;transition:all 0.3s ease;}
+  .main-sidebar.hidden-sidebar{display:none !important;}
+  .main-sidebar .tab-btn{width:100%;text-align:left;display:block;padding:.75rem .8rem;border-radius:.7rem}
+  .app-main{flex:1;width:100%;min-width:0}
+  .app-main .tab-content{min-width:0}
+  
+  @media(max-width:760px){
+    .app-layout{display:flex;flex-direction:column;gap:.7rem;padding:.4rem}
+    .main-sidebar{position:fixed;top:4rem;left:0;z-index:100;width:260px;height:calc(100vh - 4rem);background:white;box-shadow: 10px 0 25px rgba(0,0,0,0.1);max-height:none;flex:0 0 auto;display:flex;flex-direction:column;gap:.35rem;padding:.55rem;overflow-y:auto}
+    .main-sidebar.hidden-sidebar{display:none !important;}
+    .main-sidebar .tab-btn{font-size:.8rem;padding:.65rem .7rem;white-space:normal;line-height:1.2}
+    .main-sidebar .tab-btn i{margin-right:.35rem}
+    .sidebar-tools{margin-top:auto;display:flex;flex-direction:column;gap:.25rem}
+    .sidebar-tools a,.sidebar-tools button{font-size:.78rem;padding:.55rem .4rem}
+    .app-main{width:100%}
+    .app-main .tab-content>div{padding:0.75rem}
+    header .max-w-7xl{padding:.5rem .7rem}
+  }
 </style>
 </head>
-<body class="bg-gray-50 text-gray-800 font-sans antialiased">
+<body class="bg-gray-50 text-gray-800 font-sans antialiased overflow-x-hidden">
 
     <!-- GİRİŞ PORTALI -->
     <div id="loginSection" class="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-900 to-slate-900 p-4">
@@ -41,23 +70,23 @@
                 <div class="inline-flex items-center justify-center w-16 h-16 bg-indigo-100 text-indigo-600 rounded-full mb-4 text-2xl font-bold shadow-inner">
                     <i class="fa-solid fa-house-chimney"></i>
                 </div>
-                <h1 class="text-3xl font-extrabold text-gray-900">EvDefteri</h1>
-                <p class="text-gray-500 text-sm mt-1">Aile Ön Muhasebe Portalı (Bulut Senkronize)</p>
+                <h1 class="text-3xl font-extrabold text-gray-900">Aydınalp Ailesi</h1>
+                <p class="text-gray-500 text-sm mt-1">Ön Muhasebe & Hesap Portalı</p>
             </div>
             
             <form id="loginForm" onsubmit="handleLogin(event)" class="space-y-6">
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Kullanıcı Adı</label>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">E-posta adresi</label>
                     <div class="relative">
                         <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400"><i class="fa-solid fa-user"></i></span>
-                        <input type="text" id="loginUser" required class="pl-10 w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none" placeholder="admin veya aile">
+                        <input type="email" id="loginUser" autocomplete="username" required class="pl-10 w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none" placeholder="ornek@eposta.com">
                     </div>
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Şifre</label>
                     <div class="relative">
                         <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400"><i class="fa-solid fa-lock"></i></span>
-                        <input type="password" id="loginPass" required class="pl-10 w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none" placeholder="••••">
+                        <input type="password" id="loginPass" autocomplete="current-password" required class="pl-10 w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none" placeholder="Şifreniz">
                     </div>
                 </div>
                 <div id="loginError" class="text-red-500 text-xs hidden font-medium text-center"></div>
@@ -65,9 +94,21 @@
                     Sisteme Giriş Yap
                 </button>
             </form>
-            <div class="mt-6 text-center text-xs text-gray-400">
-                Varsayılan Giriş: <span class="font-semibold text-gray-600">admin</span> / Şifre: <span class="font-semibold text-gray-600">1234</span> (Veya <span class="font-semibold text-gray-600">aile</span> / 1234)
+            <div class="mt-6 text-center text-xs text-gray-400">Güvenli giriş Supabase hesabınızla yapılır.</div>
+        </div>
+    </div>
+
+    <!-- HOŞ GELDİNİZ BİLDİRİM MODALI -->
+    <div id="welcomeModal" class="fixed inset-0 bg-black/60 hidden flex items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-2xl max-w-sm w-full p-6 text-center shadow-2xl space-y-4">
+            <div class="w-16 h-16 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center text-2xl mx-auto shadow-inner">
+                <i class="fa-solid fa-face-smile"></i>
             </div>
+            <h3 class="text-xl font-bold text-gray-900">Aydınalp Ailesi Uygulamasına Hoş Geldiniz!</h3>
+            <p id="welcomeUserText" class="text-sm text-gray-600">Sisteme başarıyla giriş yaptınız.</p>
+            <button onclick="closeWelcomeModal()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 rounded-xl shadow transition">
+                Devam Et
+            </button>
         </div>
     </div>
 
@@ -77,26 +118,29 @@
         <header class="bg-white border-b border-gray-200 sticky top-0 z-50">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
                 <div class="flex items-center space-x-3">
-                    <div class="bg-indigo-600 text-white p-2 rounded-lg text-xl shadow">
+                    <button onclick="toggleSidebar()" class="text-gray-600 hover:text-indigo-600 focus:outline-none p-2 rounded-lg bg-gray-100 hover:bg-indigo-50 transition text-lg" title="Menüyü Aç/Kapat">
+                        <i class="fa-solid fa-bars"></i>
+                    </button>
+                    <div class="bg-indigo-600 text-white p-2 rounded-lg text-xl shadow hidden sm:flex items-center justify-center">
                         <i class="fa-solid fa-network-wired"></i>
                     </div>
-                    <span class="text-xl font-bold text-gray-900 tracking-tight">EvDefteri Ön Muhasebe</span>
+                    <span class="text-lg sm:text-xl font-bold text-gray-900 tracking-tight">Aydınalp Ailesi Defteri</span>
                 </div>
-                <div class="flex items-center space-x-4">
-                    <span id="syncStatus" class="text-xs bg-emerald-50 text-emerald-600 px-2.5 py-1 rounded-full font-medium flex items-center gap-1">
-                        <i class="fa-solid fa-cloud"></i> Bulut Senkronize
+                <div class="flex items-center space-x-2 sm:space-x-4">
+                    <span id="syncStatus" class="text-[10px] sm:text-xs bg-emerald-50 text-emerald-600 px-2 py-1 rounded-full font-medium flex items-center gap-1">
+                        <i class="fa-solid fa-cloud"></i> Bulut
                     </span>
                     <span id="currentUserDisplay" class="text-sm font-medium text-gray-600 bg-gray-100 px-3 py-1.5 rounded-full"></span>
                     <button onclick="handleLogout()" class="text-red-600 hover:text-red-800 text-sm font-semibold flex items-center gap-1 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-lg transition">
-                        <i class="fa-solid fa-right-from-bracket"></i> Çıkış
+                        <i class="fa-solid fa-right-from-bracket"></i> <span class="hidden sm:inline">Çıkış</span>
                     </button>
                 </div>
             </div>
         </header>
 
         <!-- İçerik Alanı & Sekmeler -->
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 w-full flex-grow">
-            <div class="flex space-x-2 overflow-x-auto pb-4 mb-6 border-b border-gray-200">
+        <div class="app-layout w-full flex-grow px-2 sm:px-5 py-4">
+            <aside id="mainSidebar" class="main-sidebar hidden-sidebar flex flex-col gap-1 p-3 bg-white rounded-2xl border border-gray-200 shadow-sm">
                 <button onclick="switchTab('dashboard')" id="btn-dashboard" class="tab-btn px-4 py-2 font-medium text-sm rounded-lg bg-indigo-600 text-white transition whitespace-nowrap shadow-sm">
                     <i class="fa-solid fa-chart-pie mr-2"></i> Özet Paneli
                 </button>
@@ -109,25 +153,24 @@
                 <button onclick="switchTab('transactions')" id="btn-transactions" class="tab-btn px-4 py-2 font-medium text-sm rounded-lg bg-white text-gray-600 hover:bg-gray-100 transition whitespace-nowrap">
                     <i class="fa-solid fa-receipt mr-2"></i> Fiş & İşlemler
                 </button>
-                <button onclick="switchTab('documents')" id="btn-documents" class="tab-btn px-4 py-2 font-medium text-sm rounded-lg bg-white text-gray-600 hover:bg-gray-100 transition whitespace-nowrap">
-                    <i class="fa-solid fa-folder-open mr-2"></i> Belgeler
-                </button>
                 <button onclick="switchTab('trialbalance')" id="btn-trialbalance" class="tab-btn px-4 py-2 font-medium text-sm rounded-lg bg-white text-gray-600 hover:bg-gray-100 transition whitespace-nowrap">
                     <i class="fa-solid fa-table-cells mr-2"></i> Mizan (Dönemsel)
                 </button>
                 <button onclick="switchTab('bills')" id="btn-bills" class="tab-btn px-4 py-2 font-medium text-sm rounded-lg bg-white text-gray-600 hover:bg-gray-100 transition whitespace-nowrap">
                     <i class="fa-solid fa-file-invoice-dollar mr-2"></i> Faturalar
                 </button>
-                <button onclick="switchTab('debts')" id="btn-debts" class="tab-btn px-4 py-2 font-medium text-sm rounded-lg bg-white text-gray-600 hover:bg-gray-100 transition whitespace-nowrap">
-                    <i class="fa-solid fa-hand-holding-dollar mr-2"></i> Borçlar & Taksitler
-                </button>
                 <button onclick="switchTab('budgets')" id="btn-budgets" class="tab-btn px-4 py-2 font-medium text-sm rounded-lg bg-white text-gray-600 hover:bg-gray-100 transition whitespace-nowrap">
                     <i class="fa-solid fa-triangle-exclamation mr-2"></i> Bütçe Limitleri
                 </button>
-                <button onclick="switchTab('reports')" id="btn-reports" class="tab-btn px-4 py-2 font-medium text-sm rounded-lg bg-white text-gray-600 hover:bg-gray-100 transition whitespace-nowrap">
-                    <i class="fa-solid fa-file-arrow-down mr-2"></i> Raporlar
-                </button>
-            </div>
+                <div class="sidebar-tools mt-4 pt-4 border-t border-gray-100 space-y-2">
+                  <button onclick="switchTab('systemrestore')" id="btn-systemrestore" class="tab-btn px-4 py-2 font-medium text-sm rounded-lg bg-white text-gray-600 hover:bg-gray-100 transition whitespace-nowrap"><i class="fa-solid fa-clock-rotate-left mr-2"></i> Sistem Geri Yükleme</button>
+                  <button onclick="downloadBackup()" class="w-full text-left px-3 py-2 rounded-lg text-sm text-slate-600 hover:bg-indigo-50"><i class="fa-solid fa-cloud-arrow-down mr-2"></i>Yedeği İndir</button>
+                  <button onclick="document.getElementById('backupImportFile').click()" class="w-full text-left px-3 py-2 rounded-lg text-sm text-slate-600 hover:bg-indigo-50"><i class="fa-brands fa-google-drive mr-2"></i>Drive'den Al</button>
+                  <input id="backupImportFile" type="file" accept=".json,application/json" class="hidden" onchange="restoreBackupFile(event)">
+                  <a href="https://drive.google.com/drive/folders/12NvjS4nK6INFH7F51KTEFbMLSMvhX4yn?usp=sharing" target="_blank" rel="noopener" class="block px-3 py-2 rounded-lg text-sm text-slate-600 hover:bg-indigo-50"><i class="fa-brands fa-google-drive mr-2"></i>Drive Klasörünü Aç</a>
+                </div>
+            </aside>
+            <main class="app-main min-w-0">
 
             <!-- 1. DASHBOARD -->
             <div id="tab-dashboard" class="tab-content space-y-6">
@@ -241,25 +284,25 @@
                         <table class="min-w-full divide-y divide-gray-200">
                             <thead class="sticky top-0 bg-gray-50 z-10">
                                 <tr>
-                                    <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">Hesap Kodu</th>
-                                    <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">Hesap Adı</th>
-                                    <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">Sınıf</th>
-                                    <th class="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase">Borç (₺)</th>
-                                    <th class="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase">Alacak (₺)</th>
-                                    <th class="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase">Bakiye (₺)</th>
-                                    <th class="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase">İşlemler</th>
+                                    <th class="px-2 py-3 text-left text-[11px] font-medium text-gray-500 uppercase">Kod</th>
+                                    <th class="px-2 py-3 text-left text-[11px] font-medium text-gray-500 uppercase">Hesap Adı</th>
+                                    <th class="px-2 py-3 text-left text-[11px] font-medium text-gray-500 uppercase">Sınıf</th>
+                                    <th class="px-2 py-3 text-right text-[11px] font-medium text-gray-500 uppercase">Borç</th>
+                                    <th class="px-2 py-3 text-right text-[11px] font-medium text-gray-500 uppercase">Alacak</th>
+                                    <th class="px-2 py-3 text-right text-[11px] font-medium text-gray-500 uppercase">Bakiye</th>
+                                    <th class="px-2 py-3 text-center text-[11px] font-medium text-gray-500 uppercase">İşlem</th>
                                 </tr>
                             </thead>
-                            <tbody id="chartOfAccountsTable" class="divide-y divide-gray-200 text-sm"></tbody>
+                            <tbody id="chartOfAccountsTable" class="divide-y divide-gray-200 text-xs"></tbody>
                         </table>
                     </div>
                 </div>
 
-                <!-- Hesap Ekstresi Alanı (Muavin Defteri Gibi) -->
+                <!-- Hesap Ekstresi Alanı -->
                 <div id="accountStatementSection" class="hidden bg-white p-6 rounded-xl shadow-sm border border-indigo-100">
                     <div class="flex justify-between items-center mb-4 pb-2 border-b">
                         <div>
-                            <span class="text-xs font-bold text-indigo-600 uppercase">HESAP EKSTRESİ (MUAVİN DEFTERİ)</span>
+                            <span class="text-xs font-bold text-indigo-600 uppercase">HESAP HAREKETLERİ</span>
                             <h3 id="statementTitle" class="text-xl font-bold text-gray-900">Hesap Adı</h3>
                         </div>
                         <button onclick="closeStatement()" class="text-gray-400 hover:text-gray-600 text-lg"><i class="fa-solid fa-xmark"></i></button>
@@ -268,29 +311,52 @@
                         <table class="min-w-full divide-y divide-gray-200">
                             <thead>
                                 <tr class="bg-indigo-50/50">
-                                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Tarih</th>
-                                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">İşlem / Açıklama</th>
-                                    <th class="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Borç (₺)</th>
-                                    <th class="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Alacak (₺)</th>
-                                    <th class="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Güncel Bakiye (₺)</th>
-                                    <th class="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">Fiş İşlemi</th>
+                                    <th class="px-2 py-2 text-left text-[11px] font-medium text-gray-500 uppercase">Tarih</th>
+                                    <th class="px-2 py-2 text-left text-[11px] font-medium text-gray-500 uppercase">Açıklama</th>
+                                    <th class="px-2 py-2 text-right text-[11px] font-medium text-gray-500 uppercase">Borç</th>
+                                    <th class="px-2 py-2 text-right text-[11px] font-medium text-gray-500 uppercase">Alacak</th>
+                                    <th class="px-2 py-2 text-right text-[11px] font-medium text-gray-500 uppercase">Bakiye</th>
+                                    <th class="px-2 py-2 text-center text-[11px] font-medium text-gray-500 uppercase">Fiş</th>
                                 </tr>
                             </thead>
-                            <tbody id="accountStatementTable" class="divide-y divide-gray-200 text-sm"></tbody>
+                            <tbody id="accountStatementTable" class="divide-y divide-gray-200 text-xs"></tbody>
                         </table>
                     </div>
                 </div>
             </div>
 
-            <!-- 3. KASA & BANKALAR -->
+            <!-- 3. KASA, BANKALAR & BORÇLAR -->
             <div id="tab-accounts" class="tab-content hidden space-y-6">
                 <div id="walletFormCard" class="bg-indigo-50 p-4 rounded-xl border border-indigo-100">
-                    <p class="text-sm text-indigo-900"><i class="fa-solid fa-circle-info mr-2"></i>Kasa ve banka bakiyeleri, Hesap Planı'ndaki 100 ve 102 kodlu hesapların fiş hareketlerinden otomatik hesaplanır. Bu ekranda elle bakiye girilmez.</p>
+                    <p class="text-sm text-indigo-900"><i class="fa-solid fa-circle-info mr-2"></i>Kasa, banka ve borç bakiyeleri Hesap Planı'ndaki fiş hareketlerinden otomatik hesaplanır.</p>
                 </div>
 
-                <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                    <h3 class="text-lg font-bold text-gray-800 mb-4">Kasa ve Banka Durumları</h3>
-                    <div id="walletsGrid" class="grid grid-cols-1 md:grid-cols-3 gap-4"></div>
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 space-y-6">
+                    <div>
+                        <h3 class="text-lg font-bold text-gray-800 mb-4">Kasa ve Banka Durumları</h3>
+                        <div id="walletsGrid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4"></div>
+                    </div>
+
+                    <div class="pt-6 border-t border-gray-100">
+                        <div class="flex justify-between items-center mb-2">
+                            <h3 class="text-lg font-bold text-gray-800">Borç Takibi (300'lü Hesaplar & Ters Bakiye Veren Bankalar)</h3>
+                            <span class="text-xs bg-indigo-50 text-indigo-700 px-3 py-1 rounded-full font-semibold"><i class="fa-solid fa-rotate mr-1"></i> Canlı Senkronize</span>
+                        </div>
+                        <p class="text-sm text-gray-500 mb-4">Sistem 300'lü pasif hesapları ve eksiye düşen (ters bakiye veren) banka/kart hesaplarını (kasa hariç) listeler.</p>
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-gray-200">
+                                <thead>
+                                    <tr>
+                                        <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Hesap Kodu</th>
+                                        <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Hesap / Borç Adı</th>
+                                        <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Kaynak Türü</th>
+                                        <th class="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Güncel Borç / Tutar (₺)</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="debtsTable" class="divide-y divide-gray-200 text-sm"></tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -299,28 +365,20 @@
                 <div id="txFormCard" class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
                     <div class="flex justify-between items-center mb-2">
                         <h3 id="txFormTitle" class="text-lg font-bold text-gray-800">Merkezi Fiş ve İşlem Girişi / Düzenleme</h3>
-
                     </div>
                     <form onsubmit="saveTransaction(event)" class="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <input type="hidden" id="editTxId">
                         <div>
-                            <label class="block text-xs font-medium text-gray-600 mb-1">İşlem Türü</label>
-                            <select id="tType" class="w-full p-2.5 border rounded-lg text-sm bg-gray-50">
-                                <option value="Gider">Gider / Ödeme (-)</option>
-                                <option value="Gelir">Gelir / Tahsilat (+)</option>
-                            </select>
-                        </div>
-                        <div>
                             <label class="block text-xs font-medium text-gray-600 mb-1">Tutar (₺)</label>
-                            <input type="number" step="0.01" id="tAmount" required class="w-full p-2.5 border rounded-lg text-sm" placeholder="0.00">
+                            <input type="text" inputmode="decimal" onblur="formatMoneyInput(this)" id="tAmount" required class="w-full p-2.5 border rounded-lg text-sm" placeholder="0.00">
                         </div>
                         <div>
                             <label class="block text-xs font-medium text-gray-600 mb-1">Borçlu Hesap Kodu (Gider/Kişi)</label>
-                            <select id="tDebitCode" class="w-full p-2.5 border rounded-lg text-sm bg-gray-50" required></select>
+                            <input type="text" oninput="filterAccountSelect('tDebitCode',this.value)" class="w-full p-2 border rounded-lg text-sm mb-1" placeholder="Hesap adı veya kodu ara..."><select id="tDebitCode" class="w-full p-2.5 border rounded-lg text-sm bg-gray-50" required></select>
                         </div>
                         <div>
                             <label class="block text-xs font-medium text-gray-600 mb-1">Alacaklı Hesap Kodu (Kasa/Banka/Kart)</label>
-                            <select id="tCreditCode" class="w-full p-2.5 border rounded-lg text-sm bg-gray-50" required></select>
+                            <input type="text" oninput="filterAccountSelect('tCreditCode',this.value)" class="w-full p-2 border rounded-lg text-sm mb-1" placeholder="Hesap adı veya kodu ara..."><select id="tCreditCode" class="w-full p-2.5 border rounded-lg text-sm bg-gray-50" required></select>
                         </div>
                         <div>
                             <label class="block text-xs font-medium text-gray-600 mb-1">Tarih</label>
@@ -348,7 +406,6 @@
                                     <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Tür</th>
                                     <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Borçlu / Alacaklı Hesap</th>
                                     <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Açıklama</th>
-                                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Fiş</th>
                                     <th class="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Tutar</th>
                                     <th class="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">İşlemler</th>
                                 </tr>
@@ -359,29 +416,7 @@
                 </div>
             </div>
 
-            <!-- 5. BELGELER SEKMESİ -->
-            <div id="tab-documents" class="tab-content hidden space-y-6">
-                <div class="bg-white p-5 sm:p-6 rounded-xl shadow-sm border border-gray-100">
-                    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-5">
-                      <div><h3 class="text-lg font-bold text-gray-800">Belge Merkezi</h3><p class="text-sm text-gray-500 mt-1">Belge ekleyin, görüntüleyin, indirin veya bilgilerini düzenleyin.</p></div>
-                      <span id="documentCount" class="text-sm font-semibold text-indigo-700 bg-indigo-50 rounded-full px-3 py-2">0 belge</span>
-                    </div>
-                    <form id="documentForm" onsubmit="saveDocument(event)" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 bg-slate-50 border border-slate-100 rounded-xl p-4 mb-6">
-                      <input type="hidden" id="editDocumentId">
-                      <div><label class="block text-xs font-semibold text-gray-600 mb-1">Belge adı *</label><input id="docName" required class="w-full p-2.5 border rounded-lg" placeholder="Örn. Elektrik faturası"></div>
-                      <div><label class="block text-xs font-semibold text-gray-600 mb-1">Belge tarihi *</label><input id="docDate" type="date" required class="w-full p-2.5 border rounded-lg"></div>
-                      <div><label class="block text-xs font-semibold text-gray-600 mb-1">Tutar (₺) — isteğe bağlı</label><input id="docAmount" type="number" step="0.01" min="0" class="w-full p-2.5 border rounded-lg" placeholder="0,00"></div>
-                      <div class="sm:col-span-2 lg:col-span-3"><label class="block text-xs font-semibold text-gray-600 mb-1">Açıklama — isteğe bağlı</label><textarea id="docDesc" rows="2" class="w-full p-2.5 border rounded-lg" placeholder="Belgeyle ilgili notlar..."></textarea></div>
-                      <div class="sm:col-span-2 lg:col-span-3"><label class="block text-xs font-semibold text-gray-600 mb-1">Dosya seçimi <span id="docFileHint" class="font-normal text-gray-400">(PDF, görsel veya diğer belge türleri)</span></label><input id="docFile" type="file" class="w-full text-sm text-gray-600 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-indigo-50 file:text-indigo-700" accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt" capture="environment"></div>
-                      <div class="sm:col-span-2 lg:col-span-3 flex flex-col sm:flex-row gap-2 sm:justify-end"><button id="docCancelBtn" type="button" onclick="resetDocumentForm()" class="hidden border bg-white text-gray-700 font-semibold px-4 py-2.5 rounded-lg">Düzenlemeyi İptal</button><button id="docSubmitBtn" type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-5 py-2.5 rounded-lg"><i class="fa-solid fa-cloud-arrow-up mr-1"></i> Belgeyi Kaydet</button></div>
-                      <p class="sm:col-span-2 lg:col-span-3 text-xs text-amber-700">Not: Çok büyük dosyalar tarayıcı depolama sınırına takılabilir. Kayıt öncesinde dosyanın uygun boyutta olduğundan emin olun.</p>
-                    </form>
-                    <div class="flex flex-col sm:flex-row gap-3 mb-4"><input id="documentSearch" oninput="renderDocuments()" class="w-full sm:max-w-sm p-2.5 border rounded-lg" placeholder="Belge adı veya açıklamada ara..."><select id="documentTypeFilter" onchange="renderDocuments()" class="w-full sm:w-48 p-2.5 border rounded-lg bg-white"><option value="all">Tüm belgeler</option><option value="image">Görseller</option><option value="pdf">PDF belgeleri</option><option value="other">Diğer dosyalar</option></select></div>
-                    <div id="documentsGrid" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4"></div>
-                </div>
-            </div>
-
-            <!-- 6. MİZAN (DÖNEMSEL / TARİH ARALIĞI) -->
+            <!-- 5. MİZAN -->
             <div id="tab-trialbalance" class="tab-content hidden space-y-6">
                 <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
                     <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-6 gap-4">
@@ -435,7 +470,7 @@
                 </div>
             </div>
 
-            <!-- 7. FATURALAR -->
+            <!-- 6. FATURALAR -->
             <div id="tab-bills" class="tab-content hidden space-y-6">
                 <div id="billFormCard" class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
                     <h3 id="billFormTitle" class="text-lg font-bold text-gray-800 mb-4">Yeni Fatura Tanımla (Tahakkuk)</h3>
@@ -447,11 +482,11 @@
                         </div>
                         <div>
                             <label class="block text-xs font-medium text-gray-600 mb-1">İlgili Gider Hesap Kodu</label>
-                            <select id="billAccCode" class="w-full p-2.5 border rounded-lg text-sm bg-gray-50" required></select>
+                            <input type="text" oninput="filterAccountSelect('billAccCode',this.value)" class="w-full p-2 border rounded-lg text-sm mb-1" placeholder="Gider hesabı ara..."><select id="billAccCode" class="w-full p-2.5 border rounded-lg text-sm bg-gray-50" required></select>
                         </div>
                         <div>
                             <label class="block text-xs font-medium text-gray-600 mb-1">Tutar (₺)</label>
-                            <input type="number" step="0.01" id="billAmount" required class="w-full p-2.5 border rounded-lg text-sm" placeholder="0.00">
+                            <input type="text" inputmode="decimal" onblur="formatMoneyInput(this)" id="billAmount" required class="w-full p-2.5 border rounded-lg text-sm" placeholder="0.00">
                         </div>
                         <div>
                             <label class="block text-xs font-medium text-gray-600 mb-1">Son Ödeme Tarihi</label>
@@ -484,42 +519,18 @@
                 </div>
             </div>
 
-            <!-- 8. BORÇLAR & TAKSİTLER (300 ve Ters Bakiye Bankalar) -->
-            <div id="tab-debts" class="tab-content hidden space-y-6">
-                <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                    <div class="flex justify-between items-center mb-2">
-                        <h3 class="text-lg font-bold text-gray-800">Borç Takibi (300'lü Hesaplar & Ters Bakiye Veren Bankalar)</h3>
-                        <span class="text-xs bg-indigo-50 text-indigo-700 px-3 py-1 rounded-full font-semibold"><i class="fa-solid fa-rotate mr-1"></i> Hesap Planından Canlı Senkronize</span>
-                    </div>
-                    <p class="text-sm text-gray-500 mb-4">Sistem 300'lü pasif hesapları ve eksiye düşen (ters bakiye veren) banka/kart hesaplarını canlı olarak algılar ve listeler.</p>
-                    <div class="overflow-x-auto">
-                        <table class="min-w-full divide-y divide-gray-200">
-                            <thead>
-                                <tr>
-                                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Hesap Kodu</th>
-                                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Hesap / Borç Adı</th>
-                                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Kaynak Türü</th>
-                                    <th class="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Güncel Borç / Tutar (₺)</th>
-                                </tr>
-                            </thead>
-                            <tbody id="debtsTable" class="divide-y divide-gray-200 text-sm"></tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-
-            <!-- 9. BÜTÇE LİMİTLERİ -->
+            <!-- 7. BÜTÇE LİMİTLERİ -->
             <div id="tab-budgets" class="tab-content hidden space-y-6">
                 <div id="budgetFormCard" class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                    <h3 class="text-lg font-bold text-gray-800 mb-2">Aylık Bütçe Limiti Belirle</h3><p class="text-sm text-gray-500 mb-4">Her hesap için tek bir aylık limit belirleyin. Aynı limit seçilen yılın 12 ayının her birinde ayrı ayrı uygulanır; harcamalar aylık hesaplanır.</p>
+                    <h3 class="text-lg font-bold text-gray-800 mb-2">Aylık Bütçe Limiti Belirle</h3><p class="text-sm text-gray-500 mb-4">Her hesap için tek bir aylık limit belirleyin.</p>
                     <form onsubmit="saveBudget(event)" class="grid grid-cols-1 md:grid-cols-4 gap-4">
                         <div>
                             <label class="block text-xs font-medium text-gray-600 mb-1">Gider Hesabı</label>
-                            <select id="bAccountCode" class="w-full p-2.5 border rounded-lg text-sm bg-gray-50"></select>
+                            <input type="text" oninput="filterAccountSelect('bAccountCode',this.value)" class="w-full p-2 border rounded-lg text-sm mb-1" placeholder="Gider hesabı ara..."><select id="bAccountCode" class="w-full p-2.5 border rounded-lg text-sm bg-gray-50"></select>
                         </div>
                         <div>
                             <label class="block text-xs font-medium text-gray-600 mb-1">Aylık Limit (₺)</label>
-                            <input type="number" step="0.01" min="0" id="bLimit" required class="w-full p-2.5 border rounded-lg text-sm" placeholder="0.00">
+                            <input type="text" inputmode="decimal" onblur="formatMoneyInput(this)" id="bLimit" required class="w-full p-2.5 border rounded-lg text-sm" placeholder="0.00">
                         </div>
                         <div>
                             <label class="block text-xs font-medium text-gray-600 mb-1">Bütçe Yılı</label>
@@ -541,74 +552,56 @@
                                 </select>
                             </label>
                             <label class="text-sm text-gray-600">Yıl
-                                <select id="budgetViewYear" onchange="renderBudgets()" class="mt-1 w-full p-2 border rounded-lg bg-white"><option>2024</option><option>2025</option><option selected>2026</option><option>2027</option><option>2028</option><option>2029</option><option>2030</option><option>2031</option><option>2032</option><option>2033</option><option>2034</option><option>2035</option></select>
+                                <select id="budgetViewYear" onchange="renderBudgets()" class="mt-1 w-full p-2 border rounded-lg bg-white"><option>2024</option><option>2025</option><option selected>2026</option><option>2027</option><option>2028</option><option>2029</option><option>2030</option></select>
                             </label>
                         </div>
                     </div>
                     <div id="budgetSummary" class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5"></div>
-                    <div class="mb-6">
-                        <h4 class="font-semibold text-gray-800 mb-3">Giderlere Göre Tek Grafik</h4>
-                        <div id="budgetChart" class="space-y-3"></div>
-                        <div class="flex flex-wrap gap-4 text-xs text-gray-500 mt-4"><span><span class="inline-block w-3 h-3 rounded-sm bg-indigo-500 mr-1"></span>Aylık limit</span><span><span class="inline-block w-3 h-3 rounded-sm bg-emerald-500 mr-1"></span>Harcanan tutar</span></div>
-                    </div>
                     <h4 class="font-semibold text-gray-800 mb-3">Seçilen Ayın Gider Detayları</h4>
                     <div id="budgetGrid" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
                 </div>
             </div>
 
-            <!-- 10. RAPORLAR -->
-            <div id="tab-reports" class="tab-content hidden space-y-6">
-                <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                    <h3 class="text-lg font-bold text-gray-800 mb-2">Rapor Dışa Aktarma ve Veri Entegrasyonu</h3>
-                    <p class="text-sm text-gray-500 mb-6">Tüm entegre fiş hareketlerini ve mizan özetini Excel veya PDF formatında indirebilir, ayrıca Excel'de yaptığınız güncellemeleri yükleyerek tüm veritabanınızı güncelleyebilirsiniz.</p>
-                    
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <!-- Dışa Aktarma -->
-                        <div class="p-4 border rounded-xl bg-gray-50/50 space-y-4">
-                            <h4 class="font-bold text-gray-700 text-sm"><i class="fa-solid fa-file-arrow-up mr-1 text-indigo-600"></i> Dışa Aktar (İndir)</h4>
-                            <div class="flex flex-wrap gap-3">
-                                <button onclick="exportToExcel()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-4 py-2.5 rounded-lg shadow text-sm flex items-center gap-2 transition">
-                                    <i class="fa-solid fa-file-excel"></i> Excel Olarak İndir (.xlsx)
-                                </button>
-                                <button onclick="exportToPDF()" class="bg-rose-600 hover:bg-rose-700 text-white font-semibold px-4 py-2.5 rounded-lg shadow text-sm flex items-center gap-2 transition">
-                                    <i class="fa-solid fa-file-pdf"></i> PDF Mizan (.pdf)
-                                </button>
-                            </div>
-                        </div>
-
-                        <!-- İçe Aktarma -->
-                        <div class="p-4 border rounded-xl bg-indigo-50/30 space-y-4">
-                            <h4 class="font-bold text-gray-700 text-sm"><i class="fa-solid fa-file-arrow-down mr-1 text-indigo-600"></i> Excel ile Verileri Güncelle & Yükle</h4>
-                            <div>
-                                <input type="file" id="excelImportFile" accept=".xlsx, .xls, .csv" class="w-full text-xs text-gray-500 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-indigo-600 file:text-white hover:file:bg-indigo-700 cursor-pointer">
-                            </div>
-                            <button onclick="importFromExcel()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-4 py-2.5 rounded-lg shadow text-sm flex items-center justify-center gap-2 transition">
-                                <i class="fa-solid fa-rotate"></i> Excel Verileri ile Veritabanını Güncelle
-                            </button>
-                        </div>
-                    </div>
+            <!-- SİSTEM GERİ YÜKLEME -->
+            <div id="tab-systemrestore" class="tab-content hidden space-y-6">
+              <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                <h3 class="text-lg font-bold text-gray-800 mb-2"><i class="fa-solid fa-clock-rotate-left text-indigo-600 mr-2"></i>Sistem Geri Yükleme Noktaları</h3>
+                <p class="text-sm text-gray-600 mb-4">Sistem, kayıtlar değiştikçe önceki verilerin yerel arşiv kopyalarını oluşturur. Fişler, hesap planı, faturalar/tahakkuklar, bütçeler, kasa-banka ve diğer veriler birlikte saklanır. Geri yükleme öncesinde mevcut durum da ayrıca yedeklenir.</p>
+                <div class="flex flex-wrap gap-2 mb-4">
+                  <button onclick="createManualRestorePoint()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-semibold"><i class="fa-solid fa-plus mr-1"></i> Şimdi Geri Yükleme Noktası Oluştur</button>
+                  <button onclick="downloadRestoreArchive()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm font-semibold"><i class="fa-solid fa-download mr-1"></i> Arşivi JSON İndir</button>
                 </div>
+                <p id="restoreArchiveStatus" class="text-xs text-gray-500 mb-3"></p>
+                <div class="overflow-x-auto">
+                  <table class="min-w-full divide-y divide-gray-200">
+                    <thead><tr class="bg-gray-50"><th class="px-3 py-2 text-left text-xs">Tarih / Saat</th><th class="px-3 py-2 text-left text-xs">Açıklama</th><th class="px-3 py-2 text-right text-xs">Fiş</th><th class="px-3 py-2 text-right text-xs">Hesap</th><th class="px-3 py-2 text-center text-xs">İşlemler</th></tr></thead>
+                    <tbody id="restorePointsTable" class="divide-y divide-gray-200 text-sm"></tbody>
+                  </table>
+                </div>
+              </div>
             </div>
 
+            
+            </div>
+            </main>
         </div>
     </div>
 
-    <!-- FİŞ ÖNİZLEME MODALI -->
-    <div id="receiptModal" class="fixed inset-0 bg-black/60 hidden flex items-center justify-center z-50 p-4">
-        <div class="bg-white rounded-xl max-w-lg w-full p-6 relative">
-            <button onclick="closeReceiptModal()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-xl"><i class="fa-solid fa-xmark"></i></button>
-            <h3 class="text-lg font-bold text-gray-800 mb-4">Fiş / Fatura Görseli</h3>
-            <div class="flex justify-center">
-                <img id="modalReceiptImg" src="" class="max-h-96 rounded-lg shadow border" alt="Fiş">
-            </div>
-        </div>
-    </div>
-
-    <!-- JavaScript Mantığı & Bulut Senkronizasyon -->
+    <!-- JavaScript Mantığı -->
     <script>
-        // BULUT SENKRONİZASYON AYARLARI (JSONBin.io)
-        const BIN_ID = '670f555dae38719619142f1f'; // Varsayılan genel ortak depolama bin ID
-        const API_KEY = '$2a$10$w09a0m1Y/eFz5W9u3QvS0u6B4T12Jg1F1z3Q5W9u3QvS0u6B4T12J'; // Sistem API Anahtarı
+        // Supabase tarayıcı ayarları: yalnızca Project URL ve publishable key kullanılır.
+        // Project URL'i Supabase panelindeki Connect / Project Settings > API bölümünden doğrulayın.
+        const SUPABASE_URL = 'https://doolhouswhukeavwgvgm.supabase.com';
+        const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_qNTXaUB7m03ZbgvPVmYwEA_iWUz3Ibc';
+        const supabaseClient = window.supabase?.createClient
+            ? window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } })
+            : null;
+        let cloudRevision = 0;
+        let cloudReady = false;
+        let cloudSaveInProgress = false;
+        let realtimeChannel = null;
+        let lastCloudDataSignature = '';
+        let localChangesSinceCloudLoad = false;
 
         const initialChartOfAccounts = [
             { code: '100', name: 'KASA HESAPLARI', type: 'Aktif', isHeader: true },
@@ -782,7 +775,7 @@
             });
         });
 
-        let db = JSON.parse(localStorage.getItem('EvDefteriTamGuncelDB_V3')) || {
+        let db = JSON.parse(localStorage.getItem('EvDefteriTamGuncelDB_V6')) || {
             currentUser: null,
             chartOfAccounts: initialChartOfAccounts,
             wallets: [
@@ -798,92 +791,205 @@
             budgets: {
                 '770.01': 10000,
                 '770.09': 25000
-            },
-            documents: []
+            }
         };
 
-        // Bulut Veritabanına Kaydetme Fonksiyonu
-        async function saveDB() {
-            localStorage.setItem('EvDefteriTamGuncelDB_V3', JSON.stringify(db));
-            
-            const syncEl = document.getElementById('syncStatus');
-            if (syncEl) {
-                syncEl.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Buluta Kaydediliyor...';
-                syncEl.className = 'text-xs bg-amber-50 text-amber-600 px-2.5 py-1 rounded-full font-medium flex items-center gap-1';
-            }
-
-            try {
-                const cloudResponse = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}`, {
-                    method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-Master-Key': API_KEY
-                    },
-                    body: JSON.stringify(db)
-                });
-                if (!cloudResponse.ok) throw new Error(`Bulut HTTP ${cloudResponse.status}`);
-                if (syncEl) {
-                    syncEl.innerHTML = '<i class="fa-solid fa-cloud-arrow-up"></i> Bulut Senkronize';
-                    syncEl.className = 'text-xs bg-emerald-50 text-emerald-600 px-2.5 py-1 rounded-full font-medium flex items-center gap-1';
-                }
-            } catch (error) {
-                console.error("Bulut kaydetme hatası:", error);
-                if (syncEl) {
-                    syncEl.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Yerel Mod';
-                    syncEl.className = 'text-xs bg-red-50 text-red-600 px-2.5 py-1 rounded-full font-medium flex items-center gap-1';
-                }
-            }
+        function setSyncStatus(kind, message) {
+            const el = document.getElementById('syncStatus');
+            if (!el) return;
+            const styles = {
+                busy: 'text-[10px] sm:text-xs bg-amber-50 text-amber-600 px-2.5 py-1 rounded-full font-medium flex items-center gap-1',
+                good: 'text-[10px] sm:text-xs bg-emerald-50 text-emerald-600 px-2.5 py-1 rounded-full font-medium flex items-center gap-1',
+                bad: 'text-[10px] sm:text-xs bg-red-50 text-red-600 px-2.5 py-1 rounded-full font-medium flex items-center gap-1'
+            };
+            el.className = styles[kind] || styles.bad;
+            el.textContent = message;
         }
 
-        // Bulut Veritabanından Verileri Çekme Fonksiyonu
-        async function fetchCloudData() {
-            try {
-                let response = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest`, {
-                    headers: { 'X-Master-Key': API_KEY }
-                });
-                if (!response.ok) throw new Error(`Bulut HTTP ${response.status}`);
-                let result = await response.json();
-                if (result && result.record && result.record.transactions) {
-                    db = result.record;
-                    localStorage.setItem('EvDefteriTamGuncelDB_V3', JSON.stringify(db));
-                    if (db.currentUser) renderAll();
-                }
-            } catch (error) {
-                console.log("Buluttan veri çekilemedi, yerel veriler kullanılıyor.");
-            }
+        function dataSignature(value) {
+            try { return JSON.stringify(value); } catch (_) { return ''; }
         }
 
-        // Arka planda her 10 saniyede bir diğer cihazlardaki güncellemeleri kontrol et
-        setInterval(fetchCloudData, 10000);
+        async function readSupabaseState() {
+            if (!supabaseClient) throw new Error('Supabase istemcisi yüklenemedi. İnternet bağlantısını ve CDN erişimini kontrol edin.');
+            const { data, error } = await supabaseClient.from('evdefteri_state').select('id,data,revision,updated_at').eq('id', 1).maybeSingle();
+            if (error) throw error;
+            return data || null;
+        }
 
-        function handleLogin(e) {
+        async function subscribeRealtime() {
+            if (!supabaseClient) return;
+            if (realtimeChannel) { try { await supabaseClient.removeChannel(realtimeChannel); } catch (_) {} }
+            realtimeChannel = supabaseClient.channel('evdefteri-live-sync')
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'evdefteri_state', filter: 'id=eq.1' }, async () => {
+                    // Yerel bir kayıt sürerken uzaktaki değişiklik yerel düzenlemeyi ezmesin.
+                    if (cloudSaveInProgress || localChangesSinceCloudLoad) return;
+                    try { await fetchCloudData({ quiet: true }); } catch (e) { console.warn('Canlı güncelleme alınamadı:', e); }
+                })
+                .subscribe((status) => {
+                    if (status === 'SUBSCRIBED') setSyncStatus('good', 'Canlı bağlantı');
+                    else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') setSyncStatus('bad', 'Canlı bağlantı hatası');
+                });
+        }
+
+        async function saveDB(options = {}) {
+            const skipArchive = options.skipArchive === true;
+            if (!skipArchive) { try { archiveCurrentState('Otomatik kayıt öncesi'); } catch (e) { console.warn('Arşiv oluşturulamadı', e); } }
+            try {
+                localStorage.setItem('EvDefteriTamGuncelDB_V6', JSON.stringify(db));
+                localStorage.setItem('EvDefteri_OtomatikYedek', JSON.stringify({app:'EvDefteri',version:1,savedAt:new Date().toISOString(),data:db}));
+            } catch (e) { console.warn('Yerel yedek kaydedilemedi:', e); }
+            if (!supabaseClient || !cloudReady) {
+                localChangesSinceCloudLoad = true;
+                setSyncStatus('bad', 'Yerel kayıt');
+                return false;
+            }
+            cloudSaveInProgress = true;
+            setSyncStatus('busy', 'Buluta kaydediliyor');
+            try {
+                // RPC, beklenen revizyonu kontrol ederek eşzamanlı kayıtların birbirini ezmesini önler.
+                const { data, error } = await supabaseClient.rpc('evdefteri_save', {
+                    p_data: db,
+                    p_expected_revision: cloudRevision
+                });
+                if (error) throw error;
+                if (data && typeof data === 'object' && data.error === 'revision_conflict') {
+                    localChangesSinceCloudLoad = true;
+                    setSyncStatus('bad', 'Çakışma: kayıt korunuyor');
+                    alert('Bu sırada başka bir cihaz verileri değiştirdi. Yerel değişiklikleriniz kaybolmasın diye otomatik üzerine yazma durduruldu. Önce mevcut verilerinizi dışa aktarıp sayfayı yenileyerek buluttaki son durumu alın.');
+                    return false;
+                }
+                const state = await readSupabaseState();
+                if (!state) throw new Error('Kayıt çağrısı başarılı görünüyor ancak bulut kaydı okunamadı. SQL tablo/RLS ayarlarını kontrol edin.');
+                cloudRevision = Number(state.revision || 0);
+                lastCloudDataSignature = dataSignature(state.data);
+                localChangesSinceCloudLoad = false;
+                setSyncStatus('good', 'Buluta kaydedildi');
+                return true;
+            } catch (error) {
+                console.error('Supabase kayıt hatası:', error);
+                localChangesSinceCloudLoad = true;
+                setSyncStatus('bad', 'Bulut kayıt hatası');
+                const msg = error?.message || 'Bilinmeyen hata';
+                if (/revision|revizyon|conflict/i.test(msg)) alert('Başka bir cihazın yaptığı değişiklikle çakışma oluştu. Bu cihazdaki değişiklikler yerel yedekte tutuldu. Verilerin üzerine yazmamak için işlem durduruldu.');
+                return false;
+            } finally { cloudSaveInProgress = false; }
+        }
+
+        async function fetchCloudData(options = {}) {
+            if (!supabaseClient) throw new Error('Supabase istemcisi yüklenemedi.');
+            const { data: { session }, error: sessionError } = await supabaseClient.auth.getSession();
+            if (sessionError) throw sessionError;
+            if (!session) { cloudReady = false; return false; }
+            const state = await readSupabaseState();
+            if (!state) {
+                cloudReady = false;
+                // İlk aktarım sadece kullanıcı açıkça onaylarsa yapılır; boş/yanlış proje mevcut verileri ezmez.
+                const local = JSON.parse(localStorage.getItem('EvDefteriTamGuncelDB_V6') || 'null');
+                if (local && Array.isArray(local.transactions) && Array.isArray(local.chartOfAccounts)) {
+                    const doImport = confirm('Supabase bulut tablosunda henüz EvDefteri kaydı bulunamadı. Bu cihazdaki mevcut verileri (fişler, hesap planı, faturalar, bütçeler ve diğer alanlar) ilk bulut kaydı olarak aktarmak ister misiniz? Mevcut yerel veriler silinmeyecek.');
+                    if (!doImport) { setSyncStatus('bad', 'Bulut kaydı bekleniyor'); return false; }
+                    db = local;
+                    cloudRevision = 0;
+                    cloudReady = true;
+                    const saved = await saveDB({skipArchive:true});
+                    if (!saved) { cloudReady = false; return false; }
+                    await subscribeRealtime();
+                    return true;
+                }
+                setSyncStatus('bad', 'Bulutta veri yok');
+                return false;
+            }
+            if (!state.data || !Array.isArray(state.data.transactions) || !Array.isArray(state.data.chartOfAccounts)) {
+                throw new Error('Supabase kaydı var ancak veri yapısı beklenen biçimde değil; yerel veriler değiştirilmedi.');
+            }
+            db = state.data;
+            cloudRevision = Number(state.revision || 0);
+            lastCloudDataSignature = dataSignature(state.data);
+            cloudReady = true;
+            localChangesSinceCloudLoad = false;
+            try {
+                localStorage.setItem('EvDefteriTamGuncelDB_V6', JSON.stringify(db));
+                localStorage.setItem('EvDefteri_OtomatikYedek', JSON.stringify({app:'EvDefteri',version:1,savedAt:new Date().toISOString(),data:db}));
+            } catch (e) { console.warn('Yerel kopya kaydedilemedi:', e); }
+            if (db.currentUser) renderAll();
+            if (!options.quiet) setSyncStatus('good', 'Buluttan alındı');
+            await subscribeRealtime();
+            return true;
+        }
+
+        // Yedek aralıklı kontrolü, Realtime bağlantısı kesilirse ek güvence olarak çalışır.
+        setInterval(async () => {
+            if (!cloudReady || cloudSaveInProgress || localChangesSinceCloudLoad) return;
+            try { await fetchCloudData({ quiet: true }); } catch (e) { console.warn('Bulut kontrolü başarısız:', e); }
+        }, 30000);
+
+        async function handleLogin(e) {
             e.preventDefault();
-            const user = document.getElementById('loginUser').value.trim().toLowerCase();
-            const pass = document.getElementById('loginPass').value.trim();
-
-            if ((user === 'admin' || user === 'aile') && pass === '1234') {
-                db.currentUser = user;
-                saveDB();
-                initApp();
-            } else {
-                const err = document.getElementById('loginError');
-                err.textContent = 'Kullanıcı adı veya şifre hatalı! (admin / 1234 veya aile / 1234)';
+            const email = document.getElementById('loginUser').value.trim();
+            const pass = document.getElementById('loginPass').value;
+            const err = document.getElementById('loginError');
+            err.classList.add('hidden');
+            if (!supabaseClient) {
+                err.textContent = 'Supabase bağlantı kütüphanesi yüklenemedi. İnternet bağlantısını kontrol edin.';
+                err.classList.remove('hidden'); return;
+            }
+            try {
+                const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password: pass });
+                if (error) throw error;
+                const user = data.user;
+                const metaRole = String(user?.user_metadata?.role || '').toLowerCase();
+                const emailPrefix = (user?.email || email).split('@')[0].toLowerCase();
+                db.currentUser = metaRole === 'aile' || emailPrefix.startsWith('aile') ? 'aile' : (metaRole === 'admin' ? 'admin' : emailPrefix);
+                cloudReady = false;
+                localChangesSinceCloudLoad = false;
+                await fetchCloudData();
+                // Bulut DB içindeki eski oturum etiketi yerine bu Supabase hesabının rolünü kullan.
+                db.currentUser = metaRole === 'aile' || emailPrefix.startsWith('aile') ? 'aile' : (metaRole === 'admin' ? 'admin' : emailPrefix);
+                if (!cloudReady) {
+                    // Bulut kaydı henüz kurulmadıysa kullanıcı oturumunu açık tutup mevcut veriyi koru.
+                    setSyncStatus('bad', 'Bulut kurulumu gerekli');
+                    const local = JSON.parse(localStorage.getItem('EvDefteriTamGuncelDB_V6') || 'null');
+                    if (local) db = local;
+                    db.currentUser = metaRole === 'aile' || emailPrefix.startsWith('aile') ? 'aile' : (metaRole === 'admin' ? 'admin' : emailPrefix);
+                }
+                document.getElementById('welcomeUserText').textContent = `Hoş geldiniz, ${(user?.email || email)}! Aydınalp Ailesi uygulamasına başarıyla giriş yaptınız.`;
+                document.getElementById('welcomeModal').classList.remove('hidden');
+            } catch (error) {
+                console.error('Giriş hatası:', error);
+                err.textContent = 'Giriş yapılamadı. E-posta/şifreyi ve Supabase Project URL ayarını kontrol edin. (' + (error?.message || 'Bağlantı hatası') + ')';
                 err.classList.remove('hidden');
             }
         }
 
-        function handleLogout() {
+        function closeWelcomeModal() {
+            document.getElementById('welcomeModal').classList.add('hidden');
+            initApp();
+        }
+
+        async function handleLogout() {
+            try { if (supabaseClient) await supabaseClient.auth.signOut(); } catch (e) { console.warn('Çıkış hatası:', e); }
             db.currentUser = null;
-            saveDB();
+            cloudReady = false;
+            localChangesSinceCloudLoad = false;
+            if (realtimeChannel && supabaseClient) { try { await supabaseClient.removeChannel(realtimeChannel); } catch (_) {} realtimeChannel = null; }
             document.getElementById('appSection').classList.add('hidden');
             document.getElementById('loginSection').classList.remove('hidden');
             document.getElementById('loginForm').reset();
         }
 
         async function initApp() {
-            await fetchCloudData(); // Açılışta en güncel bulut verisini al
+            const { data: { session } } = supabaseClient ? await supabaseClient.auth.getSession() : { data: { session: null } };
+            if (session?.user) {
+                const user = session.user;
+                const metaRole = String(user?.user_metadata?.role || '').toLowerCase();
+                const emailPrefix = (user?.email || '').split('@')[0].toLowerCase();
+                db.currentUser = metaRole === 'aile' || emailPrefix.startsWith('aile') ? 'aile' : (metaRole === 'admin' ? 'admin' : emailPrefix);
+                try { await fetchCloudData(); } catch (e) { console.error('Bulut verisi alınamadı:', e); }
+                db.currentUser = metaRole === 'aile' || emailPrefix.startsWith('aile') ? 'aile' : (metaRole === 'admin' ? 'admin' : emailPrefix);
+            }
             
-            if (!db.currentUser) {
+            if (!session?.user || !db.currentUser) {
                 document.getElementById('loginSection').classList.remove('hidden');
                 document.getElementById('appSection').classList.add('hidden');
                 return;
@@ -893,26 +999,30 @@
             document.getElementById('currentUserDisplay').innerHTML = `<i class="fa-solid fa-user-check mr-1 text-indigo-600"></i> ${db.currentUser.toUpperCase()}`;
             
             if (db.currentUser === 'aile') {
-                const formsToHide = ['accountFormCard', 'walletFormCard', 'txFormCard', 'billFormCard', 'budgetFormCard'];
-                formsToHide.forEach(id => {
+                ['accountFormCard', 'walletFormCard', 'txFormCard', 'billFormCard', 'budgetFormCard'].forEach(id => {
                     let el = document.getElementById(id);
                     if (el) el.classList.add('hidden');
                 });
             }
 
             document.getElementById('tDate').valueAsDate = new Date();
-            if (document.getElementById('docDate')) document.getElementById('docDate').value = new Date().toISOString().slice(0,10);
             const budgetYear = document.getElementById('budgetYear'); if (budgetYear) budgetYear.value = db.budgetYear || String(new Date().getFullYear());
             const budgetViewYear = document.getElementById('budgetViewYear'); if (budgetViewYear) budgetViewYear.value = db.budgetYear || String(new Date().getFullYear());
             const budgetViewMonth = document.getElementById('budgetViewMonth'); if (budgetViewMonth) budgetViewMonth.value = String(new Date().getMonth() + 1).padStart(2, '0');
             renderAll();
-            // Sayfa yenilendiğinde en son açık olan sekmeye geri dön.
+            
             const savedTab = localStorage.getItem('EvDefteriSonSekme');
             const validSavedTab = savedTab && document.getElementById('tab-' + savedTab) && document.getElementById('btn-' + savedTab);
             switchTab(validSavedTab ? savedTab : 'dashboard');
         }
 
+        function toggleSidebar() {
+            const sidebar = document.getElementById('mainSidebar');
+            sidebar.classList.toggle('hidden-sidebar');
+        }
+
         function switchTab(tabId) {
+            if (tabId === 'systemrestore') setTimeout(renderRestorePoints, 0);
             document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
             document.querySelectorAll('.tab-btn').forEach(el => {
                 el.classList.remove('bg-indigo-600', 'text-white', 'shadow-sm');
@@ -921,9 +1031,15 @@
 
             document.getElementById('tab-' + tabId).classList.remove('hidden');
             const btn = document.getElementById('btn-' + tabId);
-            btn.classList.remove('bg-white', 'text-gray-600', 'hover:bg-gray-100');
-            btn.classList.add('bg-indigo-600', 'text-white', 'shadow-sm');
-            try { localStorage.setItem('EvDefteriSonSekme', tabId); } catch (e) { /* Depolama kapalıysa sekme yine açılır. */ }
+            if(btn) {
+                btn.classList.remove('bg-white', 'text-gray-600', 'hover:bg-gray-100');
+                btn.classList.add('bg-indigo-600', 'text-white', 'shadow-sm');
+            }
+            try { localStorage.setItem('EvDefteriSonSekme', tabId); } catch (e) {}
+
+            if(window.innerWidth <= 760) {
+                document.getElementById('mainSidebar').classList.add('hidden-sidebar');
+            }
         }
 
         function renderAll() {
@@ -931,7 +1047,6 @@
             renderChartOfAccounts();
             renderWallets();
             renderTransactions();
-            renderDocuments();
             renderTrialBalance();
             renderBills();
             renderDebts();
@@ -966,10 +1081,10 @@
                 let creditObj = db.chartOfAccounts.find(a => a.code === t.wallet);
                 recentHTML += `
                     <tr>
-                        <td class="px-3 py-2.5 text-gray-500">${t.date}</td>
-                        <td class="px-3 py-2.5 font-medium text-gray-800">${creditObj ? creditObj.name : t.wallet}</td>
-                        <td class="px-3 py-2.5 text-gray-600">${t.desc}</td>
-                        <td class="px-3 py-2.5 text-right font-bold ${String(t.code).startsWith('6') || String(t.wallet).startsWith('6') ? 'text-emerald-600' : (String(t.code).startsWith('7') ? 'text-red-600' : 'text-gray-700')}">${String(t.code).startsWith('6') || String(t.wallet).startsWith('6') ? '+' : (String(t.code).startsWith('7') ? '-' : '')}₺${Number(t.amount).toLocaleString('tr-TR', {minimumFractionDigits: 2})}</td>
+                        <td class="px-2 py-2 text-gray-500">${t.date}</td>
+                        <td class="px-2 py-2 font-medium text-gray-800">${creditObj ? creditObj.name : t.wallet}</td>
+                        <td class="px-2 py-2 text-gray-600">${t.desc}</td>
+                        <td class="px-2 py-2 text-right font-bold ${String(t.code).startsWith('6') || String(t.wallet).startsWith('6') ? 'text-emerald-600' : (String(t.code).startsWith('7') ? 'text-red-600' : 'text-gray-700')}">${String(t.code).startsWith('6') || String(t.wallet).startsWith('6') ? '+' : (String(t.code).startsWith('7') ? '-' : '')}₺${Number(t.amount).toLocaleString('tr-TR', {minimumFractionDigits: 2})}</td>
                     </tr>
                 `;
             });
@@ -990,21 +1105,14 @@
                 let acc = db.chartOfAccounts.find(a => a.code === originalCode);
                 if (acc) {
                     let oldCode = acc.code;
-                    acc.code = code; 
-                    acc.name = name; 
-                    acc.type = type; 
-                    acc.isHeader = isHeader;
-
+                    acc.code = code; acc.name = name; acc.type = type; acc.isHeader = isHeader;
                     db.transactions.forEach(t => {
                         if (t.code === oldCode) t.code = code;
                         if (t.wallet === oldCode) t.wallet = code;
                     });
                 }
             } else {
-                if (db.chartOfAccounts.some(a => a.code === code)) {
-                    alert('Bu hesap kodu zaten kayıtlı!');
-                    return;
-                }
+                if (db.chartOfAccounts.some(a => a.code === code)) return alert('Bu hesap kodu zaten kayıtlı!');
                 let prefix = code.split('.')[0];
                 if (!db.chartOfAccounts.some(a => a.code === prefix)) {
                     db.chartOfAccounts.push({ code: prefix, name: name.toUpperCase() + ' ANA BAŞLIĞI', type, isHeader: true });
@@ -1027,7 +1135,6 @@
             document.getElementById('newAccCode').value = acc.code;
             document.getElementById('newAccName').value = acc.name;
             document.getElementById('newAccType').value = acc.type;
-
             document.getElementById('accountFormTitle').textContent = 'Hesap Düzenle';
             document.getElementById('accountSubmitBtn').textContent = 'Güncelle';
             document.getElementById('accountCancelBtn').classList.remove('hidden');
@@ -1068,9 +1175,7 @@
 
             let html = '';
             db.chartOfAccounts.forEach(acc => {
-                if (searchQuery && !acc.code.toLowerCase().includes(searchQuery) && !acc.name.toLowerCase().includes(searchQuery)) {
-                    return;
-                }
+                if (searchQuery && !acc.code.toLowerCase().includes(searchQuery) && !acc.name.toLowerCase().includes(searchQuery)) return;
 
                 let debit = totals[acc.code] ? totals[acc.code].debit : 0;
                 let credit = totals[acc.code] ? totals[acc.code].credit : 0;
@@ -1079,16 +1184,16 @@
                 if (acc.isHeader) {
                     html += `
                         <tr class="bg-indigo-50/80 font-bold text-indigo-950">
-                            <td class="px-3 py-3 font-mono text-indigo-700">${acc.code}</td>
-                            <td class="px-3 py-3 uppercase tracking-wider">${acc.name}</td>
-                            <td class="px-3 py-3"><span class="bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded text-xs">${acc.type}</span></td>
-                            <td class="px-3 py-3 text-right">-</td>
-                            <td class="px-3 py-3 text-right">-</td>
-                            <td class="px-3 py-3 text-right">-</td>
-                            <td class="px-3 py-3 text-center space-x-2">
+                            <td class="px-2 py-2.5 font-mono text-indigo-700">${acc.code}</td>
+                            <td class="px-2 py-2.5 uppercase tracking-wider">${acc.name}</td>
+                            <td class="px-2 py-2.5"><span class="bg-indigo-100 text-indigo-800 px-1.5 py-0.5 rounded text-[10px]">${acc.type}</span></td>
+                            <td class="px-2 py-2.5 text-right">-</td>
+                            <td class="px-2 py-2.5 text-right">-</td>
+                            <td class="px-2 py-2.5 text-right">-</td>
+                            <td class="px-2 py-2.5 text-center space-x-1">
                                 ${db.currentUser !== 'aile' ? `
-                                    <button onclick="editAccountCode('${acc.code}')" class="text-indigo-600 hover:text-indigo-800 text-xs"><i class="fa-solid fa-pen"></i></button>
-                                    <button onclick="deleteAccountCode('${acc.code}')" class="text-red-500 hover:text-red-700 text-xs"><i class="fa-solid fa-trash"></i></button>
+                                    <button onclick="editAccountCode('${acc.code}')" class="text-indigo-600 hover:text-indigo-800"><i class="fa-solid fa-pen"></i></button>
+                                    <button onclick="deleteAccountCode('${acc.code}')" class="text-red-500 hover:text-red-700"><i class="fa-solid fa-trash"></i></button>
                                 ` : '-'}
                             </td>
                         </tr>
@@ -1103,17 +1208,17 @@
 
                     html += `
                         <tr class="hover:bg-gray-50 border-b border-gray-100">
-                            <td class="px-3 py-2.5 font-mono text-gray-600 pl-6"><i class="fa-solid fa-arrow-turn-down text-gray-300 mr-2 text-xs"></i>${acc.code}</td>
-                            <td class="px-3 py-2.5 text-gray-800 font-medium">${acc.name}</td>
-                            <td class="px-3 py-2.5"><span class="bg-gray-100 text-gray-600 px-2 py-0.5 rounded text-xs">${acc.type}</span></td>
-                            <td class="px-3 py-2.5 text-right font-semibold text-gray-700">₺${debit.toLocaleString('tr-TR', {minimumFractionDigits: 2})}</td>
-                            <td class="px-3 py-2.5 text-right font-semibold text-gray-700">₺${credit.toLocaleString('tr-TR', {minimumFractionDigits: 2})}</td>
-                            <td class="px-3 py-2.5 text-right font-bold ${balanceColor}">₺${Math.abs(balance).toLocaleString('tr-TR', {minimumFractionDigits: 2})} ${balanceType}</td>
-                            <td class="px-3 py-2.5 text-center space-x-2">
-                                <button onclick="viewAccountStatement('${acc.code}')" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-2 py-1 rounded text-xs font-semibold mr-1"><i class="fa-solid fa-file-lines"></i> Ekstre</button>
+                            <td class="px-2 py-2 font-mono text-gray-600 pl-3"><i class="fa-solid fa-arrow-turn-down text-gray-300 mr-1 text-[10px]"></i>${acc.code}</td>
+                            <td class="px-2 py-2 text-gray-800 font-medium">${acc.name}</td>
+                            <td class="px-2 py-2"><span class="bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded text-[10px]">${acc.type}</span></td>
+                            <td class="px-2 py-2 text-right font-semibold text-gray-700">₺${debit.toLocaleString('tr-TR', {minimumFractionDigits: 2})}</td>
+                            <td class="px-2 py-2 text-right font-semibold text-gray-700">₺${credit.toLocaleString('tr-TR', {minimumFractionDigits: 2})}</td>
+                            <td class="px-2 py-2 text-right font-bold ${balanceColor}">₺${Math.abs(balance).toLocaleString('tr-TR', {minimumFractionDigits: 2})} ${balanceType}</td>
+                            <td class="px-2 py-2 text-center whitespace-nowrap">
+                                <button onclick="viewAccountStatement('${acc.code}')" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-1.5 py-1 rounded text-[11px] font-semibold mr-1"><i class="fa-solid fa-file-lines"></i></button>
                                 ${db.currentUser !== 'aile' ? `
-                                    <button onclick="editAccountCode('${acc.code}')" class="text-indigo-600 hover:text-indigo-800 text-xs"><i class="fa-solid fa-pen"></i></button>
-                                    <button onclick="deleteAccountCode('${acc.code}')" class="text-red-500 hover:text-red-700 text-xs"><i class="fa-solid fa-trash"></i></button>
+                                    <button onclick="editAccountCode('${acc.code}')" class="text-indigo-600 hover:text-indigo-800"><i class="fa-solid fa-pen"></i></button>
+                                    <button onclick="deleteAccountCode('${acc.code}')" class="text-red-500 hover:text-red-700"><i class="fa-solid fa-trash"></i></button>
                                 ` : ''}
                             </td>
                         </tr>
@@ -1121,6 +1226,13 @@
                 }
             });
             document.getElementById('chartOfAccountsTable').innerHTML = html || '<tr><td colspan="7" class="text-center py-4 text-gray-400">Kayıt bulunamadı.</td></tr>';
+        }
+
+        function deleteStatementTransaction(id, code) {
+            if (db.currentUser === 'aile') return alert('Yetkiniz yok!');
+            if (!confirm('Bu fişi silmek istediğinizden emin misiniz?')) return;
+            db.transactions = db.transactions.filter(t => t.id !== id);
+            saveDB(); renderAll(); viewAccountStatement(code);
         }
 
         function viewAccountStatement(code) {
@@ -1152,12 +1264,12 @@
 
                     statementHTML += `
                         <tr>
-                            <td class="px-3 py-2.5 text-gray-500">${t.date}</td>
-                            <td class="px-3 py-2.5 text-gray-800">${t.desc} <span class="text-xs text-gray-400">(Karşı: ${isDebit ? t.wallet : t.code})</span></td>
-                            <td class="px-3 py-2.5 text-right font-semibold text-gray-700">${debitVal > 0 ? '₺' + debitVal.toLocaleString('tr-TR', {minimumFractionDigits: 2}) : '-'}</td>
-                            <td class="px-3 py-2.5 text-right font-semibold text-gray-700">${creditVal > 0 ? '₺' + creditVal.toLocaleString('tr-TR', {minimumFractionDigits: 2}) : '-'}</td>
-                            <td class="px-3 py-2.5 text-right font-bold ${runningBalance >= 0 ? 'text-emerald-600' : 'text-red-600'}">₺${Math.abs(runningBalance).toLocaleString('tr-TR', {minimumFractionDigits: 2})} ${runningBalance >= 0 ? '(B)' : '(A)'}</td>
-                            <td class="px-3 py-2.5 text-center">${db.currentUser !== 'aile' ? `<button onclick="editTransaction(${t.id})" class="bg-amber-50 hover:bg-amber-100 text-amber-700 px-2 py-1 rounded text-xs font-semibold"><i class="fa-solid fa-pen mr-1"></i>Fişi Düzelt</button>` : '<span class="text-xs text-gray-400">Yalnızca görüntüleme</span>'}</td>
+                            <td class="px-2 py-2 text-gray-500">${t.date}</td>
+                            <td class="px-2 py-2 text-gray-800">${t.desc} <span class="text-[10px] text-gray-400">(Karşı: ${isDebit ? t.wallet : t.code})</span></td>
+                            <td class="px-2 py-2 text-right font-semibold text-gray-700">${debitVal > 0 ? '₺' + debitVal.toLocaleString('tr-TR', {minimumFractionDigits: 2}) : '-'}</td>
+                            <td class="px-2 py-2 text-right font-semibold text-gray-700">${creditVal > 0 ? '₺' + creditVal.toLocaleString('tr-TR', {minimumFractionDigits: 2}) : '-'}</td>
+                            <td class="px-2 py-2 text-right font-bold ${runningBalance >= 0 ? 'text-emerald-600' : 'text-red-600'}">₺${Math.abs(runningBalance).toLocaleString('tr-TR', {minimumFractionDigits: 2})} ${runningBalance >= 0 ? '(B)' : '(A)'}</td>
+                            <td class="px-2 py-2 text-center">${db.currentUser !== 'aile' ? `<button onclick="editTransaction(${t.id})" title="Fişi düzenle" class="bg-amber-50 hover:bg-amber-100 text-amber-700 px-1 py-1 rounded text-[10px] font-semibold"><i class="fa-solid fa-pen"></i></button><button onclick="deleteStatementTransaction(${t.id}, '${code}')" title="Fişi sil" class="bg-red-50 hover:bg-red-100 text-red-700 px-1 py-1 rounded text-[10px] ml-1"><i class="fa-solid fa-trash"></i></button>` : '-'}</td>
                         </tr>
                     `;
                 });
@@ -1184,11 +1296,6 @@
             return totals;
         }
 
-        function addWallet(e) {
-            e.preventDefault();
-            alert('Kasa ve banka hesapları Hesap Planı sekmesinden yönetilir. Bakiye fişlerden otomatik hesaplanır; elle bakiye girilemez.');
-        }
-
         function renderWallets() {
             const totals = getAccountTotals();
             const cashBankAccounts = db.chartOfAccounts.filter(a => !a.isHeader && (a.code.startsWith('100') || a.code.startsWith('102')));
@@ -1197,9 +1304,10 @@
                 const t = totals[acc.code] || {debit:0,credit:0};
                 const balance = t.debit - t.credit;
                 const kind = acc.code.startsWith('100') ? 'Kasa' : 'Banka';
-                html += `<div class="bg-white border border-gray-200 p-4 rounded-xl flex justify-between items-center shadow-sm"><div><span class="text-xs font-semibold text-indigo-600 uppercase">${kind} · ${acc.code}</span><h4 class="text-base font-bold text-gray-800">${acc.name}</h4><p class="text-xs text-gray-400 mt-1">Hesap Planı ve fişlerden otomatik</p></div><div class="text-right"><p class="text-lg font-extrabold ${balance >= 0 ? 'text-emerald-600' : 'text-red-600'}">₺${Math.abs(balance).toLocaleString('tr-TR',{minimumFractionDigits:2})}</p><p class="text-xs ${balance >= 0 ? 'text-emerald-600' : 'text-red-600'}">${balance >= 0 ? 'Borç bakiyesi' : 'Alacak / ters bakiye'}</p></div></div>`;
+                html += `<div class="bg-white border border-gray-200 p-4 rounded-xl flex justify-between items-center shadow-sm"><div><span class="text-xs font-semibold text-indigo-600 uppercase">${kind} · ${acc.code}</span><h4 class="text-base font-bold text-gray-800">${acc.name}</h4><p class="text-xs text-gray-400 mt-1">Hesap Planı ve fişlerden</p></div><div class="text-right"><p class="text-lg font-extrabold ${balance >= 0 ? 'text-emerald-600' : 'text-red-600'}">₺${Math.abs(balance).toLocaleString('tr-TR',{minimumFractionDigits:2})}</p><p class="text-xs ${balance >= 0 ? 'text-emerald-600' : 'text-red-600'}">${balance >= 0 ? 'Borç bakiyesi' : 'Alacak / ters bakiye'}</p></div></div>`;
             });
-            document.getElementById('walletsGrid').innerHTML = html || '<p class="text-gray-400">Hesap Planı içinde 100 veya 102 kodlu alt hesap bulunamadı.</p>';
+            document.getElementById('walletsGrid').innerHTML = html || '<p class="text-gray-400">Hesap bulunamadı.</p>';
+            
             const selectHTML = db.chartOfAccounts.filter(a => !a.isHeader).map(a => `<option value="${a.code}">${a.code} - ${a.name}</option>`).join('');
             if(document.getElementById('tCreditCode')) document.getElementById('tCreditCode').innerHTML = selectHTML;
             if(document.getElementById('tDebitCode')) document.getElementById('tDebitCode').innerHTML = selectHTML;
@@ -1207,12 +1315,33 @@
             if(document.getElementById('bAccountCode')) document.getElementById('bAccountCode').innerHTML = db.chartOfAccounts.filter(a => !a.isHeader && a.type === 'Gider').map(a => `<option value="${a.code}">${a.code} - ${a.name}</option>`).join('');
         }
 
+
+        function parseMoney(value) {
+            if (typeof value === 'number') return value;
+            let v = String(value || '').trim().replace(/₺/g,'').replace(/\s/g,'');
+            if (v.includes(',')) v = v.replace(/\./g,'').replace(',', '.');
+            return Number.parseFloat(v) || 0;
+        }
+        function formatMoneyInput(input) {
+            const value = parseMoney(input.value);
+            input.value = value ? value.toLocaleString('tr-TR',{minimumFractionDigits:2,maximumFractionDigits:2}) + ' ₺' : '';
+        }
+        function filterAccountSelect(selectId, query) {
+            const el = document.getElementById(selectId);
+            if (!el) return;
+            const old = el.value, q = String(query || '').toLocaleLowerCase('tr-TR');
+            const isExpense = selectId === 'billAccCode' || selectId === 'bAccountCode';
+            const list = db.chartOfAccounts.filter(a => !a.isHeader && (!isExpense || a.type === 'Gider') &&
+                (!q || a.code.toLocaleLowerCase('tr-TR').includes(q) || a.name.toLocaleLowerCase('tr-TR').includes(q)));
+            el.innerHTML = list.map(a => `<option value="${a.code}">${a.code} - ${a.name}</option>`).join('');
+            if (list.some(a=>a.code===old)) el.value=old;
+        }
+
         function saveTransaction(e) {
             e.preventDefault();
             if (db.currentUser === 'aile') return alert('Yetkiniz yok!');
             const editId = document.getElementById('editTxId').value;
-            const type = document.getElementById('tType').value;
-            const amount = parseFloat(document.getElementById('tAmount').value);
+            const amount = parseMoney(document.getElementById('tAmount').value);
             const code = document.getElementById('tDebitCode').value;
             const wallet = document.getElementById('tCreditCode').value;
             const date = document.getElementById('tDate').value;
@@ -1220,7 +1349,8 @@
 
             const existing = editId ? db.transactions.find(t => t.id == editId) : null;
             const newTxId = editId ? Number(editId) : Date.now();
-            const txObj = { id:newTxId, type, amount, code, wallet, date, desc, receipt: existing ? (existing.receipt || null) : null };
+            const inferredType = String(code).startsWith('6') ? 'Gelir' : (String(code).startsWith('7') ? 'Gider' : 'Çift Taraflı');
+            const txObj = { id:newTxId, type: inferredType, amount, code, wallet, date, desc, receipt: existing ? (existing.receipt || null) : null };
             if (editId) {
                 const idx = db.transactions.findIndex(t => t.id == editId);
                 if (idx !== -1) db.transactions[idx] = txObj;
@@ -1229,7 +1359,6 @@
             renderAll();
             resetTxForm();
             alert('İşlem kaydedildi!');
-
         }
 
         function editTransaction(id) {
@@ -1237,7 +1366,6 @@
             let tx = db.transactions.find(t => t.id === id);
             if (!tx) return;
             document.getElementById('editTxId').value = tx.id;
-            document.getElementById('tType').value = tx.type;
             document.getElementById('tAmount').value = tx.amount;
             document.getElementById('tDebitCode').value = tx.code;
             document.getElementById('tCreditCode').value = tx.wallet;
@@ -1264,7 +1392,6 @@
             if (db.currentUser === 'aile') return alert('Yetkiniz yok!');
             if (!confirm('İşlemi silmek istiyor musunuz?')) return;
             db.transactions = db.transactions.filter(t => t.id !== id);
-            db.documents = db.documents.filter(d => d.id !== id);
             saveDB();
             renderAll();
         }
@@ -1283,9 +1410,6 @@
                             <span class="text-emerald-600 font-bold">(A) ${t.wallet}</span> - ${creditAccObj ? creditAccObj.name : ''}
                         </td>
                         <td class="px-3 py-2.5 text-gray-600">${t.desc}</td>
-                        <td class="px-3 py-2.5">
-                            ${t.receipt ? `<button onclick="showReceipt('${t.receipt}')" class="text-indigo-600 hover:underline text-xs"><i class="fa-solid fa-image"></i> Görüntüle</button>` : '<span class="text-gray-300 text-xs">Yok</span>'}
-                        </td>
                         <td class="px-3 py-2.5 text-right font-bold text-gray-900">₺${Number(t.amount).toLocaleString('tr-TR', {minimumFractionDigits: 2})}</td>
                         <td class="px-3 py-2.5 text-center space-x-2">
                             ${db.currentUser !== 'aile' ? `
@@ -1296,94 +1420,8 @@
                     </tr>
                 `;
             });
-            document.getElementById('allTransactionsTable').innerHTML = html || '<tr><td colspan="7" class="text-center py-4 text-gray-400">Kayıt yok.</td></tr>';
+            document.getElementById('allTransactionsTable').innerHTML = html || '<tr><td colspan="6" class="text-center py-4 text-gray-400">Kayıt yok.</td></tr>';
         }
-
-        function saveDocument(e) {
-            e.preventDefault();
-            if (db.currentUser === 'aile') return alert('Yetkiniz yok!');
-            const editId = document.getElementById('editDocumentId').value;
-            const file = document.getElementById('docFile').files[0];
-            const existing = editId ? db.documents.find(d => String(d.id) === String(editId)) : null;
-            const applySave = (fileData, fileName, mimeType) => {
-              const doc = { id: editId ? (existing.id) : Date.now(), name: document.getElementById('docName').value.trim(), date: document.getElementById('docDate').value, amount: Number(document.getElementById('docAmount').value || 0), desc: document.getElementById('docDesc').value.trim(), file: fileData || (existing && existing.file) || (existing && existing.image) || null, fileName: fileName || (existing && existing.fileName) || 'Ekli belge', mimeType: mimeType || (existing && existing.mimeType) || '', image: fileData && (mimeType || '').startsWith('image/') ? fileData : (existing && existing.image) || null };
-              try {
-                if (existing) db.documents[db.documents.findIndex(d => String(d.id) === String(editId))] = doc;
-                else db.documents.unshift(doc);
-                localStorage.setItem('EvDefteriTamGuncelDB_V3', JSON.stringify(db));
-              } catch(err) { return alert('Belge tarayıcıya kaydedilemedi. Dosya çok büyük olabilir. Daha küçük bir dosya seçip tekrar deneyin.'); }
-              saveDB(); renderAll(); resetDocumentForm(); alert(existing ? 'Belge bilgileri güncellendi.' : 'Belge arşive kaydedildi.');
-            };
-            if (file) {
-              if (file.size > 5 * 1024 * 1024) return alert('Dosya 5 MB sınırını aşıyor. Lütfen daha küçük bir dosya seçin.');
-              const reader = new FileReader(); reader.onload = ev => applySave(ev.target.result, file.name, file.type || 'application/octet-stream'); reader.onerror = () => alert('Dosya okunamadı. Lütfen tekrar deneyin.'); reader.readAsDataURL(file);
-            } else {
-              if (!existing || !(existing.file || existing.image)) return alert('Lütfen bir belge dosyası seçin.');
-              applySave(null, null, null);
-            }
-        }
-
-        function editDocument(id) {
-            if (db.currentUser === 'aile') return alert('Yetkiniz yok!');
-            const d = db.documents.find(x => String(x.id) === String(id)); if (!d) return;
-            document.getElementById('editDocumentId').value = d.id;
-            document.getElementById('docName').value = d.name || d.desc || d.fileName || 'Belge';
-            document.getElementById('docDate').value = d.date || new Date().toISOString().slice(0,10);
-            document.getElementById('docAmount').value = d.amount || '';
-            document.getElementById('docDesc').value = d.notes || (d.name ? d.desc || '' : '');
-            document.getElementById('docFile').value = '';
-            document.getElementById('docFileHint').textContent = 'Dosya seçmezseniz mevcut dosya korunur';
-            document.getElementById('docSubmitBtn').textContent = 'Değişiklikleri Kaydet';
-            document.getElementById('docCancelBtn').classList.remove('hidden');
-            switchTab('documents'); document.getElementById('documentForm').scrollIntoView({behavior:'smooth',block:'start'});
-        }
-
-        function resetDocumentForm() {
-            document.getElementById('documentForm').reset();
-            document.getElementById('editDocumentId').value = '';
-            document.getElementById('docDate').value = new Date().toISOString().slice(0,10);
-            document.getElementById('docFileHint').textContent = '(PDF, görsel veya diğer belge türleri)';
-            document.getElementById('docSubmitBtn').innerHTML = '<i class="fa-solid fa-cloud-arrow-up mr-1"></i> Belgeyi Kaydet';
-            document.getElementById('docCancelBtn').classList.add('hidden');
-        }
-
-        function deleteDocument(id) {
-            if (db.currentUser === 'aile') return alert('Yetkiniz yok!');
-            if (!confirm('Bu belgeyi arşivden silmek istiyor musunuz?')) return;
-            db.documents = db.documents.filter(d => String(d.id) !== String(id)); saveDB(); renderAll();
-        }
-
-        function openDocument(id) {
-            const d = db.documents.find(x => String(x.id) === String(id)); if (!d) return;
-            const data = d.file || d.image; if (!data) return alert('Bu kayıt için ekli dosya bulunamadı.');
-            if ((d.mimeType || '').startsWith('image/') || (!d.mimeType && String(data).startsWith('data:image/'))) showReceipt(data);
-            else { const a = document.createElement('a'); a.href = data; a.target = '_blank'; a.rel = 'noopener'; a.download = d.fileName || d.name || 'belge'; a.click(); }
-        }
-
-        function renderDocuments() {
-            const grid = document.getElementById('documentsGrid'); if (!grid) return;
-            const q = (document.getElementById('documentSearch')?.value || '').toLocaleLowerCase('tr-TR');
-            const type = document.getElementById('documentTypeFilter')?.value || 'all';
-            const docs = (db.documents || []).filter(d => {
-              const name = (d.name || d.desc || d.fileName || '').toLocaleLowerCase('tr-TR');
-              const desc = (d.notes || d.desc || '').toLocaleLowerCase('tr-TR');
-              const mime = d.mimeType || (d.image ? 'image/legacy' : '');
-              return (!q || name.includes(q) || desc.includes(q)) && (type === 'all' || (type === 'image' && mime.startsWith('image/')) || (type === 'pdf' && mime === 'application/pdf') || (type === 'other' && !mime.startsWith('image/') && mime !== 'application/pdf'));
-            });
-            document.getElementById('documentCount').textContent = `${(db.documents || []).length} belge`;
-            if (!docs.length) { grid.innerHTML = '<div class="sm:col-span-2 xl:col-span-3 text-center py-10 text-gray-400"><i class="fa-solid fa-folder-open text-4xl mb-3 text-gray-300"></i><p>Bu filtrede belge bulunamadı.</p></div>'; return; }
-            grid.innerHTML = docs.map(d => {
-              const name = d.name || d.desc || d.fileName || 'Belge'; const data = d.file || d.image; const mime = d.mimeType || (d.image ? 'image/legacy' : '');
-              const preview = mime.startsWith('image/') && data ? `<img src="${data}" alt="Belge önizlemesi" class="w-full h-40 object-contain bg-white rounded-lg border">` : `<div class="w-full h-40 flex flex-col items-center justify-center bg-white rounded-lg border text-indigo-600"><i class="fa-solid ${mime==='application/pdf'?'fa-file-pdf':'fa-file-lines'} text-4xl mb-2"></i><span class="text-xs text-gray-500 px-3 text-center break-all">${d.fileName || 'Dosya eki'}</span></div>`;
-              return `<article class="border border-gray-200 rounded-xl p-4 bg-white shadow-sm flex flex-col gap-3"><div class="flex justify-between gap-2 items-start"><h4 class="font-bold text-gray-800 break-words">${name}</h4><span class="text-xs text-gray-500 whitespace-nowrap">${d.date || ''}</span></div>${preview}<div class="text-sm text-gray-600">${d.desc || ''}</div>${d.amount ? `<div class="font-bold text-indigo-700">₺${Number(d.amount).toLocaleString('tr-TR',{minimumFractionDigits:2})}</div>` : ''}<div class="text-xs text-gray-400 break-all">${d.fileName || ''}</div><div class="flex flex-wrap gap-2 mt-auto pt-2 border-t"><button onclick="openDocument('${d.id}')" class="flex-1 bg-indigo-50 text-indigo-700 px-3 py-2 rounded-lg text-xs font-semibold"><i class="fa-solid fa-eye mr-1"></i> Görüntüle / İndir</button>${db.currentUser !== 'aile' ? `<button onclick="editDocument('${d.id}')" class="bg-amber-50 text-amber-700 px-3 py-2 rounded-lg text-xs font-semibold"><i class="fa-solid fa-pen mr-1"></i>Düzenle</button><button onclick="deleteDocument('${d.id}')" class="bg-red-50 text-red-600 px-3 py-2 rounded-lg text-xs font-semibold"><i class="fa-solid fa-trash mr-1"></i>Sil</button>` : ''}</div></article>`;
-            }).join('');
-        }
-
-        function showReceipt(imgSrc) {
-            document.getElementById('modalReceiptImg').src = imgSrc;
-            document.getElementById('receiptModal').classList.remove('hidden');
-        }
-        function closeReceiptModal() { document.getElementById('receiptModal').classList.add('hidden'); }
 
         function renderTrialBalance() {
             let period = document.getElementById('mizanPeriod').value;
@@ -1457,7 +1495,7 @@
             const editId = document.getElementById('editBillId').value;
             const name = document.getElementById('billName').value;
             const code = document.getElementById('billAccCode').value;
-            const amount = parseFloat(document.getElementById('billAmount').value);
+            const amount = parseMoney(document.getElementById('billAmount').value);
             const dueDate = document.getElementById('billDueDate').value;
 
             if (editId) {
@@ -1528,7 +1566,7 @@
 
         function renderBills() {
             let html = '';
-            db.bills.forEach(b => {
+            db.bills.slice().sort((a,b)=>String(a.dueDate||'').localeCompare(String(b.dueDate||''))).forEach(b => {
                 let accObj = db.chartOfAccounts.find(a => a.code === b.code);
                 html += `
                     <tr>
@@ -1570,7 +1608,7 @@
                 let balance = credit - debit;
 
                 let is300 = acc.code.startsWith('300');
-                let isTersBakiyeBanka = (acc.code.startsWith('100') || acc.code.startsWith('102')) && (debit - credit > 0);
+                let isTersBakiyeBanka = acc.code.startsWith('102') && (debit - credit > 0);
 
                 if (is300 || isTersBakiyeBanka) {
                     let tutar = is300 ? balance : (debit - credit);
@@ -1579,7 +1617,7 @@
                             <tr>
                                 <td class="px-3 py-2.5 font-mono text-indigo-600 font-bold">${acc.code}</td>
                                 <td class="px-3 py-2.5 font-medium text-gray-800">${acc.name}</td>
-                                <td class="px-3 py-2.5"><span class="px-2 py-1 rounded text-xs font-semibold ${is300 ? 'bg-purple-100 text-purple-700' : 'bg-red-100 text-red-700'}">${is300 ? '300lü Hesap' : 'Ters Bakiye'}</span></td>
+                                <td class="px-3 py-2.5"><span class="px-2 py-1 rounded text-xs font-semibold ${is300 ? 'bg-purple-100 text-purple-700' : 'bg-red-100 text-red-700'}">${is300 ? '300lü Hesap' : 'Ters Bakiye Banka'}</span></td>
                                 <td class="px-3 py-2.5 text-right font-bold text-red-600">₺${tutar.toLocaleString('tr-TR', {minimumFractionDigits: 2})}</td>
                             </tr>
                         `;
@@ -1594,15 +1632,23 @@
             e.preventDefault();
             if (db.currentUser === 'aile') return alert('Yetkiniz yok!');
             const code = document.getElementById('bAccountCode').value;
-            const limit = parseFloat(document.getElementById('bLimit').value);
+            const month = document.getElementById('budgetViewMonth').value;
+            const limit = parseMoney(document.getElementById('bLimit').value);
             const year = document.getElementById('budgetYear').value || String(new Date().getFullYear());
             if (!code || !Number.isFinite(limit) || limit < 0) return alert('Hesap ve geçerli aylık limit seçin.');
             if (!db.budgets || Array.isArray(db.budgets)) db.budgets = {};
-            db.budgets[code] = limit;
+            db.budgets[`${year}-${month}|${code}`] = limit;
             db.budgetYear = year;
             const viewYear = document.getElementById('budgetViewYear'); if (viewYear) viewYear.value = year;
             saveDB(); renderAll();
-            alert(`${year} yılı için aylık limit kaydedildi. Aynı limit 12 ayın her birine uygulanır.`);
+            alert(`${year} yılı için aylık limit kaydedildi.`);
+        }
+
+        function deleteBudget(key) {
+            if (db.currentUser === 'aile') return alert('Yetkiniz yok!');
+            if (!confirm('Bu ayın bütçe limitini silmek istiyor musunuz?')) return;
+            if (db.budgets) delete db.budgets[key];
+            saveDB(); renderAll();
         }
 
         function renderBudgets() {
@@ -1621,12 +1667,13 @@
 
             const budgets = db.budgets || {};
             const entries = Object.entries(budgets)
-                .filter(([code, limit]) => db.chartOfAccounts.some(a => a.code === code && !a.isHeader && a.type === 'Gider') && Number(limit) >= 0)
-                .map(([code, limit]) => {
+                .map(([key, limit]) => { const parts=key.split('|'); return {key, code:parts.length>1?parts[1]:key, yearMonth:parts.length>1?parts[0]:null, limit}; })
+                .filter(item => (!item.yearMonth || item.yearMonth === monthKey) && db.chartOfAccounts.some(a => a.code === item.code && !a.isHeader && a.type === 'Gider') && Number(item.limit) >= 0)
+                .map(({key, code, limit}) => {
                     const acc = db.chartOfAccounts.find(a => a.code === code);
                     const spent = totals[`${monthKey}|${code}`] || 0;
                     const monthlyLimit = Number(limit) || 0;
-                    return { code, limit: monthlyLimit, acc, spent, exceeded: spent > monthlyLimit, pct: monthlyLimit > 0 ? Math.round(spent / monthlyLimit * 100) : (spent > 0 ? 100 : 0) };
+                    return { key, code, limit: monthlyLimit, acc, spent, exceeded: spent > monthlyLimit, pct: monthlyLimit > 0 ? Math.round(spent / monthlyLimit * 100) : (spent > 0 ? 100 : 0) };
                 });
 
             let warningHTML = '';
@@ -1640,30 +1687,13 @@
                 <div class="rounded-lg bg-emerald-50 p-4"><p class="text-xs text-emerald-700 mb-1">Toplam harcama · ${monthName} ${year}</p><p class="text-xl font-bold text-emerald-800">${money(totalSpent)}</p></div>
                 <div class="rounded-lg ${exceededCount ? 'bg-red-50' : 'bg-gray-50'} p-4"><p class="text-xs ${exceededCount ? 'text-red-700' : 'text-gray-600'} mb-1">Limit aşan gider sayısı</p><p class="text-xl font-bold ${exceededCount ? 'text-red-700' : 'text-gray-800'}">${exceededCount}</p></div>`;
 
-            const maxValue = Math.max(1, ...entries.map(e => Math.max(e.limit, e.spent)));
-            const chartHTML = entries.map(e => {
-                const limitWidth = Math.max(0, Math.min(100, e.limit / maxValue * 100));
-                const spentWidth = Math.max(0, Math.min(100, e.spent / maxValue * 100));
-                const name = `${e.code} · ${e.acc ? e.acc.name : ''}`;
-                return `<div class="rounded-lg border border-gray-100 p-3">
-                    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 mb-2">
-                        <span class="text-sm font-semibold text-gray-800">${name}</span>
-                        <span class="text-xs ${e.exceeded ? 'text-red-600 font-bold' : 'text-gray-500'}">Harcanan ${money(e.spent)} / Limit ${money(e.limit)} · %${e.pct}</span>
-                    </div>
-                    <div class="space-y-2">
-                        <div class="flex items-center gap-2"><span class="w-16 text-xs text-gray-500">Limit</span><div class="flex-1 h-3 bg-gray-100 rounded-full overflow-hidden"><div class="h-full bg-indigo-500 rounded-full" style="width:${limitWidth}%"></div></div></div>
-                        <div class="flex items-center gap-2"><span class="w-16 text-xs text-gray-500">Harcama</span><div class="flex-1 h-3 bg-gray-100 rounded-full overflow-hidden"><div class="h-full ${e.exceeded ? 'bg-red-500' : 'bg-emerald-500'} rounded-full" style="width:${spentWidth}%"></div></div></div>
-                    </div>
-                </div>`;
-            }).join('');
-            document.getElementById('budgetChart').innerHTML = chartHTML || '<p class="text-sm text-gray-400">Grafik oluşturmak için önce gider hesaplarına bütçe limiti tanımlayın.</p>';
-
             let html = '';
             entries.forEach(e => {
                 html += `<section class="border rounded-xl overflow-hidden bg-white">
                     <div class="px-4 py-3 ${e.exceeded ? 'bg-red-50' : 'bg-indigo-50'} border-b">
                         <h4 class="font-bold text-gray-800">${e.code} · ${e.acc ? e.acc.name : ''}</h4>
                         <p class="text-sm ${e.exceeded ? 'text-red-700' : 'text-indigo-700'}">${monthName} ${year} · ${e.exceeded ? 'Bütçe limiti aşıldı' : 'Bütçe limiti içinde'}</p>
+                        <button onclick="deleteBudget('${e.key}')" class="mt-2 text-xs text-red-600 hover:text-red-800"><i class="fa-solid fa-trash"></i> Limiti Sil</button>
                     </div>
                     <div class="p-4">
                         <div class="flex items-center justify-between gap-2 mb-2 text-sm"><span>Harcanan</span><strong class="${e.exceeded ? 'text-red-600' : 'text-gray-800'}">${money(e.spent)}</strong></div>
@@ -1677,6 +1707,7 @@
             document.getElementById('budgetGrid').innerHTML = html || '<p class="text-gray-400">Henüz bütçe limiti tanımlanmadı.</p>';
             document.getElementById('budgetWarningContainer').innerHTML = warningHTML || `<p class="text-sm text-emerald-600"><i class="fa-solid fa-circle-check"></i> ${monthName} ${year} için bütçe aşımı görünmüyor.</p>`;
         }
+
         function exportToExcel() {
             let dataToExport = db.transactions.map(t => {
                 let debitAcc = db.chartOfAccounts.find(a => a.code === t.code);
@@ -1747,7 +1778,7 @@
         function exportToPDF() {
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF();
-            doc.text("EvDefteri - Mizan Raporu", 14, 20);
+            doc.text("Aydınalp Ailesi - Mizan Raporu", 14, 20);
             
             let tableData = [];
             db.chartOfAccounts.forEach(acc => {
@@ -1758,10 +1789,58 @@
             });
 
             doc.autoTable({ head: [['Kod', 'Hesap Adı', 'Borç', 'Alacak']], body: tableData, startY: 30 });
-            doc.save("EvDefteri_Mizan.pdf");
+            doc.save("AydinalpAilesi_Mizan.pdf");
         }
 
-        window.onload = function() { initApp(); };
+        const RESTORE_ARCHIVE_KEY = 'EvDefteri_SistemGeriYuklemeArsivi_V1';
+        function readRestoreArchive(){try{const v=JSON.parse(localStorage.getItem(RESTORE_ARCHIVE_KEY)||'[]');return Array.isArray(v)?v:[]}catch(e){return[]}}
+        function writeRestoreArchive(items){try{localStorage.setItem(RESTORE_ARCHIVE_KEY,JSON.stringify(items));return true}catch(e){console.warn(e);return false}}
+        function archiveCurrentState(label){if(!db)return false;const items=readRestoreArchive();items.unshift({id:'rp_'+Date.now()+'_'+Math.random().toString(36).slice(2,8),savedAt:new Date().toISOString(),label:label||'Otomatik geri yükleme noktası',data:JSON.parse(JSON.stringify(db))});return writeRestoreArchive(items)}
+        function createManualRestorePoint(){if(archiveCurrentState('Kullanıcı tarafından oluşturuldu')){renderRestorePoints();alert('Geri yükleme noktası oluşturuldu.')}else alert('Arşiv kaydedilemedi. Tarayıcı alanı dolu olabilir; arşivi JSON olarak indirin.')}
+        function renderRestorePoints(){const tbody=document.getElementById('restorePointsTable');if(!tbody)return;const items=readRestoreArchive();const status=document.getElementById('restoreArchiveStatus');if(status)status.textContent=items.length+' geri yükleme noktası bu tarayıcıda arşivlenmiş. Bulut verileriyle otomatik senkron değildir; JSON arşivini ayrıca indirip saklayın.';tbody.innerHTML=items.map(p=>`<tr><td class="px-3 py-3 whitespace-nowrap">${new Date(p.savedAt).toLocaleString('tr-TR')}</td><td class="px-3 py-3">${escapeRestoreText(p.label||'Geri yükleme noktası')}</td><td class="px-3 py-3 text-right">${Array.isArray(p.data?.transactions)?p.data.transactions.length:0}</td><td class="px-3 py-3 text-right">${Array.isArray(p.data?.chartOfAccounts)?p.data.chartOfAccounts.length:0}</td><td class="px-3 py-3"><div class="flex justify-center gap-2"><button onclick="restorePoint('${p.id}')" class="bg-amber-100 text-amber-800 px-3 py-1.5 rounded text-xs font-semibold">Geri Yükle</button><button onclick="deleteRestorePoint('${p.id}')" class="bg-red-100 text-red-700 px-3 py-1.5 rounded text-xs font-semibold">Sil</button></div></td></tr>`).join('')||'<tr><td colspan="5" class="p-5 text-center text-gray-400">Henüz geri yükleme noktası yok.</td></tr>'}
+        function escapeRestoreText(v){return String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+        async function restorePoint(id){const p=readRestoreArchive().find(x=>x.id===id);if(!p||!p.data||!Array.isArray(p.data.transactions)||!Array.isArray(p.data.chartOfAccounts))return alert('Geri yükleme noktası geçersiz.');if(!confirm('Seçilen noktadaki tüm sistem verileri mevcut verilerin üzerine yüklenecek. Mevcut durum önce arşivlenecek. Devam edilsin mi?'))return;if(!archiveCurrentState('Geri yükleme öncesi güvenlik kopyası'))return alert('Mevcut durum arşivlenemedi; işlem iptal edildi.');db=JSON.parse(JSON.stringify(p.data));try{localStorage.setItem('EvDefteriTamGuncelDB_V6',JSON.stringify(db));saveLocalSafetyBackup()}catch(e){return alert('Yerel kayıt hatası: '+e.message)}await saveDB();renderAll();renderRestorePoints();alert('Sistem verileri geri yüklendi.')}
+        function deleteRestorePoint(id){const items=readRestoreArchive();if(!items.some(p=>p.id===id))return;if(!confirm('Bu geri yükleme noktası kalıcı olarak silinsin mi?'))return;if(writeRestoreArchive(items.filter(p=>p.id!==id)))renderRestorePoints();else alert('Silme başarısız oldu.')}
+        function downloadRestoreArchive(){const payload=JSON.stringify({app:'EvDefteri',archiveVersion:1,exportedAt:new Date().toISOString(),points:readRestoreArchive()},null,2);const url=URL.createObjectURL(new Blob([payload],{type:'application/json'}));const a=document.createElement('a');a.href=url;a.download='EvDefteri_Geri_Yukleme_Arsivi_'+new Date().toISOString().slice(0,10)+'.json';document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url)}
+
+        function saveLocalSafetyBackup() {
+            try {
+                localStorage.setItem('EvDefteri_OtomatikYedek', JSON.stringify({ app: 'EvDefteri', version: 1, savedAt: new Date().toISOString(), data: db }));
+            } catch (e) {}
+        }
+        function downloadBackup() {
+            const payload = JSON.stringify({ app: 'EvDefteri', version: 1, savedAt: new Date().toISOString(), data: db }, null, 2);
+            const blob = new Blob([payload], {type:'application/json'});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a'); a.href = url;
+            a.download = 'AydinalpAilesi_Yedek_' + new Date().toISOString().slice(0,10) + '.json';
+            document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+        }
+        function restoreBackupFile(event) {
+            const file = event.target.files && event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function() {
+                try {
+                    const parsed = JSON.parse(reader.result);
+                    const restored = parsed && parsed.data ? parsed.data : parsed;
+                    if (!restored || !Array.isArray(restored.transactions) || !Array.isArray(restored.chartOfAccounts)) {
+                        throw new Error('Dosya geçerli bir yedek dosyası değil.');
+                    }
+                    if (!confirm('Seçilen yedek mevcut verilerin üzerine yazılacak. Devam edilsin mi?')) return;
+                    db = restored;
+                    localStorage.setItem('EvDefteriTamGuncelDB_V6', JSON.stringify(db));
+                    saveLocalSafetyBackup();
+                    renderAll();
+                    alert('Yedek başarıyla geri yüklendi.');
+                } catch (err) { alert('Yedek okunamadı: ' + err.message); }
+                finally { event.target.value = ''; }
+            };
+            reader.readAsText(file);
+        }
+        window.addEventListener('beforeunload', saveLocalSafetyBackup);
+
+        window.onload = function() { initApp(); saveLocalSafetyBackup(); };
     </script>
 </body>
 </html>
