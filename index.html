@@ -6,7 +6,6 @@
     <title>Aydınalp Ailesi - Ön Muhasebe & Hesap Ekstresi</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- SheetJS (Excel Export) -->
@@ -76,17 +75,17 @@
             
             <form id="loginForm" onsubmit="handleLogin(event)" class="space-y-6">
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">E-posta adresi</label>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Kullanıcı Adı</label>
                     <div class="relative">
                         <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400"><i class="fa-solid fa-user"></i></span>
-                        <input type="email" id="loginUser" autocomplete="username" required class="pl-10 w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none" placeholder="ornek@eposta.com">
+                        <input type="text" id="loginUser" required class="pl-10 w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none" placeholder="admin veya aile">
                     </div>
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Şifre</label>
                     <div class="relative">
                         <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400"><i class="fa-solid fa-lock"></i></span>
-                        <input type="password" id="loginPass" autocomplete="current-password" required class="pl-10 w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none" placeholder="Şifreniz">
+                        <input type="password" id="loginPass" required class="pl-10 w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none" placeholder="••••">
                     </div>
                 </div>
                 <div id="loginError" class="text-red-500 text-xs hidden font-medium text-center"></div>
@@ -94,7 +93,9 @@
                     Sisteme Giriş Yap
                 </button>
             </form>
-            <div class="mt-6 text-center text-xs text-gray-400">Güvenli giriş Supabase hesabınızla yapılır.</div>
+            <div class="mt-6 text-center text-xs text-gray-400">
+                Varsayılan Giriş: <span class="font-semibold text-gray-600">admin</span> / Şifre: <span class="font-semibold text-gray-600">1234</span>
+            </div>
         </div>
     </div>
 
@@ -589,19 +590,13 @@
 
     <!-- JavaScript Mantığı -->
     <script>
-        // Supabase tarayıcı ayarları: yalnızca Project URL ve publishable key kullanılır.
-        // Project URL'i Supabase panelindeki Connect / Project Settings > API bölümünden doğrulayın.
-        const SUPABASE_URL = 'https://doolhouswhukeavwgvgm.supabase.com';
-        const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_qNTXaUB7m03ZbgvPVmYwEA_iWUz3Ibc';
-        const supabaseClient = window.supabase?.createClient
-            ? window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } })
-            : null;
-        let cloudRevision = 0;
-        let cloudReady = false;
+        // Basit bulut eşitleme: Supabase REST API (giriş hesabı gerektirmez).
+        const CLOUD_URL = 'https://doolhouswhukeavwgvgm.supabase.co';
+        const CLOUD_KEY = 'sb_publishable_qNTXaUB7m03ZbgvPVmYwEA_iWUz3Ibc';
         let cloudSaveInProgress = false;
-        let realtimeChannel = null;
-        let lastCloudDataSignature = '';
-        let localChangesSinceCloudLoad = false;
+        let lastCloudSignature = '';
+        let lastCloudUpdatedAt = '';
+        let cloudLoadedOnce = false;
 
         const initialChartOfAccounts = [
             { code: '100', name: 'KASA HESAPLARI', type: 'Aktif', isHeader: true },
@@ -794,7 +789,7 @@
             }
         };
 
-        function setSyncStatus(kind, message) {
+        function setCloudStatus(kind, message) {
             const el = document.getElementById('syncStatus');
             if (!el) return;
             const styles = {
@@ -806,158 +801,88 @@
             el.textContent = message;
         }
 
-        function dataSignature(value) {
-            try { return JSON.stringify(value); } catch (_) { return ''; }
-        }
-
-        async function readSupabaseState() {
-            if (!supabaseClient) throw new Error('Supabase istemcisi yüklenemedi. İnternet bağlantısını ve CDN erişimini kontrol edin.');
-            const { data, error } = await supabaseClient.from('evdefteri_state').select('id,data,revision,updated_at').eq('id', 1).maybeSingle();
-            if (error) throw error;
-            return data || null;
-        }
-
-        async function subscribeRealtime() {
-            if (!supabaseClient) return;
-            if (realtimeChannel) { try { await supabaseClient.removeChannel(realtimeChannel); } catch (_) {} }
-            realtimeChannel = supabaseClient.channel('evdefteri-live-sync')
-                .on('postgres_changes', { event: '*', schema: 'public', table: 'evdefteri_state', filter: 'id=eq.1' }, async () => {
-                    // Yerel bir kayıt sürerken uzaktaki değişiklik yerel düzenlemeyi ezmesin.
-                    if (cloudSaveInProgress || localChangesSinceCloudLoad) return;
-                    try { await fetchCloudData({ quiet: true }); } catch (e) { console.warn('Canlı güncelleme alınamadı:', e); }
-                })
-                .subscribe((status) => {
-                    if (status === 'SUBSCRIBED') setSyncStatus('good', 'Canlı bağlantı');
-                    else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') setSyncStatus('bad', 'Canlı bağlantı hatası');
-                });
+        function cloudHeaders(extra = {}) {
+            return { 'apikey': CLOUD_KEY, 'Authorization': `Bearer ${CLOUD_KEY}`, 'Content-Type': 'application/json', ...extra };
         }
 
         async function saveDB(options = {}) {
-            const skipArchive = options.skipArchive === true;
-            if (!skipArchive) { try { archiveCurrentState('Otomatik kayıt öncesi'); } catch (e) { console.warn('Arşiv oluşturulamadı', e); } }
+            try { if (!options.skipArchive) archiveCurrentState('Otomatik kayıt öncesi'); } catch (e) { console.warn('Arşiv oluşturulamadı', e); }
             try {
                 localStorage.setItem('EvDefteriTamGuncelDB_V6', JSON.stringify(db));
                 localStorage.setItem('EvDefteri_OtomatikYedek', JSON.stringify({app:'EvDefteri',version:1,savedAt:new Date().toISOString(),data:db}));
-            } catch (e) { console.warn('Yerel yedek kaydedilemedi:', e); }
-            if (!supabaseClient || !cloudReady) {
-                localChangesSinceCloudLoad = true;
-                setSyncStatus('bad', 'Yerel kayıt');
-                return false;
-            }
+            } catch (e) { console.warn('Yerel yedek alınamadı:', e); }
+
+            setCloudStatus('busy', 'Buluta kaydediliyor');
             cloudSaveInProgress = true;
-            setSyncStatus('busy', 'Buluta kaydediliyor');
             try {
-                // RPC, beklenen revizyonu kontrol ederek eşzamanlı kayıtların birbirini ezmesini önler.
-                const { data, error } = await supabaseClient.rpc('evdefteri_save', {
-                    p_data: db,
-                    p_expected_revision: cloudRevision
+                const now = new Date().toISOString();
+                const response = await fetch(`${CLOUD_URL}/rest/v1/evdefteri_state?on_conflict=id`, {
+                    method: 'POST',
+                    headers: cloudHeaders({ 'Prefer': 'resolution=merge-duplicates,return=representation' }),
+                    body: JSON.stringify([{ id: 1, data: db, revision: 1, updated_at: now }])
                 });
-                if (error) throw error;
-                if (data && typeof data === 'object' && data.error === 'revision_conflict') {
-                    localChangesSinceCloudLoad = true;
-                    setSyncStatus('bad', 'Çakışma: kayıt korunuyor');
-                    alert('Bu sırada başka bir cihaz verileri değiştirdi. Yerel değişiklikleriniz kaybolmasın diye otomatik üzerine yazma durduruldu. Önce mevcut verilerinizi dışa aktarıp sayfayı yenileyerek buluttaki son durumu alın.');
-                    return false;
-                }
-                const state = await readSupabaseState();
-                if (!state) throw new Error('Kayıt çağrısı başarılı görünüyor ancak bulut kaydı okunamadı. SQL tablo/RLS ayarlarını kontrol edin.');
-                cloudRevision = Number(state.revision || 0);
-                lastCloudDataSignature = dataSignature(state.data);
-                localChangesSinceCloudLoad = false;
-                setSyncStatus('good', 'Buluta kaydedildi');
-                return true;
+                if (!response.ok) throw new Error(`Bulut HTTP ${response.status}: ${(await response.text()).slice(0,250)}`);
+                lastCloudSignature = JSON.stringify(db);
+                lastCloudUpdatedAt = now;
+                cloudLoadedOnce = true;
+                setCloudStatus('good', 'Buluta kaydedildi');
             } catch (error) {
-                console.error('Supabase kayıt hatası:', error);
-                localChangesSinceCloudLoad = true;
-                setSyncStatus('bad', 'Bulut kayıt hatası');
-                const msg = error?.message || 'Bilinmeyen hata';
-                if (/revision|revizyon|conflict/i.test(msg)) alert('Başka bir cihazın yaptığı değişiklikle çakışma oluştu. Bu cihazdaki değişiklikler yerel yedekte tutuldu. Verilerin üzerine yazmamak için işlem durduruldu.');
-                return false;
+                console.error('Bulut kaydı başarısız:', error);
+                setCloudStatus('bad', 'Bulut hatası - yerel kayıt var');
             } finally { cloudSaveInProgress = false; }
         }
 
         async function fetchCloudData(options = {}) {
-            if (!supabaseClient) throw new Error('Supabase istemcisi yüklenemedi.');
-            const { data: { session }, error: sessionError } = await supabaseClient.auth.getSession();
-            if (sessionError) throw sessionError;
-            if (!session) { cloudReady = false; return false; }
-            const state = await readSupabaseState();
-            if (!state) {
-                cloudReady = false;
-                // İlk aktarım sadece kullanıcı açıkça onaylarsa yapılır; boş/yanlış proje mevcut verileri ezmez.
-                const local = JSON.parse(localStorage.getItem('EvDefteriTamGuncelDB_V6') || 'null');
-                if (local && Array.isArray(local.transactions) && Array.isArray(local.chartOfAccounts)) {
-                    const doImport = confirm('Supabase bulut tablosunda henüz EvDefteri kaydı bulunamadı. Bu cihazdaki mevcut verileri (fişler, hesap planı, faturalar, bütçeler ve diğer alanlar) ilk bulut kaydı olarak aktarmak ister misiniz? Mevcut yerel veriler silinmeyecek.');
-                    if (!doImport) { setSyncStatus('bad', 'Bulut kaydı bekleniyor'); return false; }
-                    db = local;
-                    cloudRevision = 0;
-                    cloudReady = true;
-                    const saved = await saveDB({skipArchive:true});
-                    if (!saved) { cloudReady = false; return false; }
-                    await subscribeRealtime();
-                    return true;
-                }
-                setSyncStatus('bad', 'Bulutta veri yok');
-                return false;
-            }
-            if (!state.data || !Array.isArray(state.data.transactions) || !Array.isArray(state.data.chartOfAccounts)) {
-                throw new Error('Supabase kaydı var ancak veri yapısı beklenen biçimde değil; yerel veriler değiştirilmedi.');
-            }
-            db = state.data;
-            cloudRevision = Number(state.revision || 0);
-            lastCloudDataSignature = dataSignature(state.data);
-            cloudReady = true;
-            localChangesSinceCloudLoad = false;
+            if (cloudSaveInProgress) return;
             try {
-                localStorage.setItem('EvDefteriTamGuncelDB_V6', JSON.stringify(db));
-                localStorage.setItem('EvDefteri_OtomatikYedek', JSON.stringify({app:'EvDefteri',version:1,savedAt:new Date().toISOString(),data:db}));
-            } catch (e) { console.warn('Yerel kopya kaydedilemedi:', e); }
-            if (db.currentUser) renderAll();
-            if (!options.quiet) setSyncStatus('good', 'Buluttan alındı');
-            await subscribeRealtime();
-            return true;
+                const response = await fetch(`${CLOUD_URL}/rest/v1/evdefteri_state?id=eq.1&select=id,data,revision,updated_at`, {
+                    headers: cloudHeaders(), cache: 'no-store'
+                });
+                if (!response.ok) throw new Error(`Bulut HTTP ${response.status}: ${(await response.text()).slice(0,250)}`);
+                const rows = await response.json();
+                const row = Array.isArray(rows) ? rows[0] : null;
+                if (row && row.data && Array.isArray(row.data.transactions)) {
+                    const signature = JSON.stringify(row.data);
+                    // Değişiklik yoksa ekrandaki veriyi tekrar çizme.
+                    if (signature !== lastCloudSignature) {
+                        // Buluttan gelen veri farklıysa mevcut cihazdaki veriyi önce koru.
+                        try { if (db && Array.isArray(db.transactions) && db.transactions.length) archiveCurrentState('Bulut verisi yüklenmeden önce güvenlik kopyası'); } catch (e) { console.warn('Güvenlik arşivi oluşturulamadı:', e); }
+                        db = row.data;
+                        localStorage.setItem('EvDefteriTamGuncelDB_V6', JSON.stringify(db));
+                        localStorage.setItem('EvDefteri_OtomatikYedek', JSON.stringify({app:'EvDefteri',version:1,savedAt:new Date().toISOString(),data:db}));
+                        lastCloudSignature = signature;
+                        lastCloudUpdatedAt = row.updated_at || '';
+                        if (db.currentUser) renderAll();
+                    }
+                    cloudLoadedOnce = true;
+                    if (!options.quiet) setCloudStatus('good', 'Bulut bağlantısı hazır');
+                } else if (!cloudLoadedOnce) {
+                    // Bulut henüz boşsa bu cihazdaki mevcut veriyi ilk kez yükle.
+                    await saveDB({ skipArchive: true });
+                }
+            } catch (error) {
+                console.error('Bulut verisi alınamadı:', error);
+                if (!options.quiet) setCloudStatus('bad', 'Bağlantı kurulamadı');
+            }
         }
 
-        // Yedek aralıklı kontrolü, Realtime bağlantısı kesilirse ek güvence olarak çalışır.
-        setInterval(async () => {
-            if (!cloudReady || cloudSaveInProgress || localChangesSinceCloudLoad) return;
-            try { await fetchCloudData({ quiet: true }); } catch (e) { console.warn('Bulut kontrolü başarısız:', e); }
-        }, 30000);
+        setInterval(() => fetchCloudData({ quiet: true }), 10000);
 
-        async function handleLogin(e) {
+        function handleLogin(e) {
             e.preventDefault();
-            const email = document.getElementById('loginUser').value.trim();
-            const pass = document.getElementById('loginPass').value;
-            const err = document.getElementById('loginError');
-            err.classList.add('hidden');
-            if (!supabaseClient) {
-                err.textContent = 'Supabase bağlantı kütüphanesi yüklenemedi. İnternet bağlantısını kontrol edin.';
-                err.classList.remove('hidden'); return;
-            }
-            try {
-                const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password: pass });
-                if (error) throw error;
-                const user = data.user;
-                const metaRole = String(user?.user_metadata?.role || '').toLowerCase();
-                const emailPrefix = (user?.email || email).split('@')[0].toLowerCase();
-                db.currentUser = metaRole === 'aile' || emailPrefix.startsWith('aile') ? 'aile' : (metaRole === 'admin' ? 'admin' : emailPrefix);
-                cloudReady = false;
-                localChangesSinceCloudLoad = false;
-                await fetchCloudData();
-                // Bulut DB içindeki eski oturum etiketi yerine bu Supabase hesabının rolünü kullan.
-                db.currentUser = metaRole === 'aile' || emailPrefix.startsWith('aile') ? 'aile' : (metaRole === 'admin' ? 'admin' : emailPrefix);
-                if (!cloudReady) {
-                    // Bulut kaydı henüz kurulmadıysa kullanıcı oturumunu açık tutup mevcut veriyi koru.
-                    setSyncStatus('bad', 'Bulut kurulumu gerekli');
-                    const local = JSON.parse(localStorage.getItem('EvDefteriTamGuncelDB_V6') || 'null');
-                    if (local) db = local;
-                    db.currentUser = metaRole === 'aile' || emailPrefix.startsWith('aile') ? 'aile' : (metaRole === 'admin' ? 'admin' : emailPrefix);
-                }
-                document.getElementById('welcomeUserText').textContent = `Hoş geldiniz, ${(user?.email || email)}! Aydınalp Ailesi uygulamasına başarıyla giriş yaptınız.`;
+            const user = document.getElementById('loginUser').value.trim().toLowerCase();
+            const pass = document.getElementById('loginPass').value.trim();
+
+            if ((user === 'admin' || user === 'aile') && pass === '1234') {
+                db.currentUser = user;
+                saveDB();
+                
+                // Karşılama Bildirimi Göster
+                document.getElementById('welcomeUserText').textContent = `Hoş geldiniz, ${user.toUpperCase()}! Aydınalp Ailesi uygulamasına başarıyla giriş yaptınız.`;
                 document.getElementById('welcomeModal').classList.remove('hidden');
-            } catch (error) {
-                console.error('Giriş hatası:', error);
-                err.textContent = 'Giriş yapılamadı. E-posta/şifreyi ve Supabase Project URL ayarını kontrol edin. (' + (error?.message || 'Bağlantı hatası') + ')';
+            } else {
+                const err = document.getElementById('loginError');
+                err.textContent = 'Kullanıcı adı veya şifre hatalı! (admin / 1234 veya aile / 1234)';
                 err.classList.remove('hidden');
             }
         }
@@ -967,29 +892,18 @@
             initApp();
         }
 
-        async function handleLogout() {
-            try { if (supabaseClient) await supabaseClient.auth.signOut(); } catch (e) { console.warn('Çıkış hatası:', e); }
+        function handleLogout() {
             db.currentUser = null;
-            cloudReady = false;
-            localChangesSinceCloudLoad = false;
-            if (realtimeChannel && supabaseClient) { try { await supabaseClient.removeChannel(realtimeChannel); } catch (_) {} realtimeChannel = null; }
+            saveDB();
             document.getElementById('appSection').classList.add('hidden');
             document.getElementById('loginSection').classList.remove('hidden');
             document.getElementById('loginForm').reset();
         }
 
         async function initApp() {
-            const { data: { session } } = supabaseClient ? await supabaseClient.auth.getSession() : { data: { session: null } };
-            if (session?.user) {
-                const user = session.user;
-                const metaRole = String(user?.user_metadata?.role || '').toLowerCase();
-                const emailPrefix = (user?.email || '').split('@')[0].toLowerCase();
-                db.currentUser = metaRole === 'aile' || emailPrefix.startsWith('aile') ? 'aile' : (metaRole === 'admin' ? 'admin' : emailPrefix);
-                try { await fetchCloudData(); } catch (e) { console.error('Bulut verisi alınamadı:', e); }
-                db.currentUser = metaRole === 'aile' || emailPrefix.startsWith('aile') ? 'aile' : (metaRole === 'admin' ? 'admin' : emailPrefix);
-            }
+            await fetchCloudData();
             
-            if (!session?.user || !db.currentUser) {
+            if (!db.currentUser) {
                 document.getElementById('loginSection').classList.remove('hidden');
                 document.getElementById('appSection').classList.add('hidden');
                 return;
@@ -1797,7 +1711,7 @@
         function writeRestoreArchive(items){try{localStorage.setItem(RESTORE_ARCHIVE_KEY,JSON.stringify(items));return true}catch(e){console.warn(e);return false}}
         function archiveCurrentState(label){if(!db)return false;const items=readRestoreArchive();items.unshift({id:'rp_'+Date.now()+'_'+Math.random().toString(36).slice(2,8),savedAt:new Date().toISOString(),label:label||'Otomatik geri yükleme noktası',data:JSON.parse(JSON.stringify(db))});return writeRestoreArchive(items)}
         function createManualRestorePoint(){if(archiveCurrentState('Kullanıcı tarafından oluşturuldu')){renderRestorePoints();alert('Geri yükleme noktası oluşturuldu.')}else alert('Arşiv kaydedilemedi. Tarayıcı alanı dolu olabilir; arşivi JSON olarak indirin.')}
-        function renderRestorePoints(){const tbody=document.getElementById('restorePointsTable');if(!tbody)return;const items=readRestoreArchive();const status=document.getElementById('restoreArchiveStatus');if(status)status.textContent=items.length+' geri yükleme noktası bu tarayıcıda arşivlenmiş. Bulut verileriyle otomatik senkron değildir; JSON arşivini ayrıca indirip saklayın.';tbody.innerHTML=items.map(p=>`<tr><td class="px-3 py-3 whitespace-nowrap">${new Date(p.savedAt).toLocaleString('tr-TR')}</td><td class="px-3 py-3">${escapeRestoreText(p.label||'Geri yükleme noktası')}</td><td class="px-3 py-3 text-right">${Array.isArray(p.data?.transactions)?p.data.transactions.length:0}</td><td class="px-3 py-3 text-right">${Array.isArray(p.data?.chartOfAccounts)?p.data.chartOfAccounts.length:0}</td><td class="px-3 py-3"><div class="flex justify-center gap-2"><button onclick="restorePoint('${p.id}')" class="bg-amber-100 text-amber-800 px-3 py-1.5 rounded text-xs font-semibold">Geri Yükle</button><button onclick="deleteRestorePoint('${p.id}')" class="bg-red-100 text-red-700 px-3 py-1.5 rounded text-xs font-semibold">Sil</button></div></td></tr>`).join('')||'<tr><td colspan="5" class="p-5 text-center text-gray-400">Henüz geri yükleme noktası yok.</td></tr>'}
+        function renderRestorePoints(){const tbody=document.getElementById('restorePointsTable');if(!tbody)return;const items=readRestoreArchive();const status=document.getElementById('restoreArchiveStatus');if(status)status.textContent=items.length+' geri yükleme noktası bu tarayıcıda arşivlenmiş. Tarayıcı verileri silinirse arşiv etkilenebilir; JSON arşivini düzenli indirin.';tbody.innerHTML=items.map(p=>`<tr><td class="px-3 py-3 whitespace-nowrap">${new Date(p.savedAt).toLocaleString('tr-TR')}</td><td class="px-3 py-3">${escapeRestoreText(p.label||'Geri yükleme noktası')}</td><td class="px-3 py-3 text-right">${Array.isArray(p.data?.transactions)?p.data.transactions.length:0}</td><td class="px-3 py-3 text-right">${Array.isArray(p.data?.chartOfAccounts)?p.data.chartOfAccounts.length:0}</td><td class="px-3 py-3"><div class="flex justify-center gap-2"><button onclick="restorePoint('${p.id}')" class="bg-amber-100 text-amber-800 px-3 py-1.5 rounded text-xs font-semibold">Geri Yükle</button><button onclick="deleteRestorePoint('${p.id}')" class="bg-red-100 text-red-700 px-3 py-1.5 rounded text-xs font-semibold">Sil</button></div></td></tr>`).join('')||'<tr><td colspan="5" class="p-5 text-center text-gray-400">Henüz geri yükleme noktası yok.</td></tr>'}
         function escapeRestoreText(v){return String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
         async function restorePoint(id){const p=readRestoreArchive().find(x=>x.id===id);if(!p||!p.data||!Array.isArray(p.data.transactions)||!Array.isArray(p.data.chartOfAccounts))return alert('Geri yükleme noktası geçersiz.');if(!confirm('Seçilen noktadaki tüm sistem verileri mevcut verilerin üzerine yüklenecek. Mevcut durum önce arşivlenecek. Devam edilsin mi?'))return;if(!archiveCurrentState('Geri yükleme öncesi güvenlik kopyası'))return alert('Mevcut durum arşivlenemedi; işlem iptal edildi.');db=JSON.parse(JSON.stringify(p.data));try{localStorage.setItem('EvDefteriTamGuncelDB_V6',JSON.stringify(db));saveLocalSafetyBackup()}catch(e){return alert('Yerel kayıt hatası: '+e.message)}await saveDB();renderAll();renderRestorePoints();alert('Sistem verileri geri yüklendi.')}
         function deleteRestorePoint(id){const items=readRestoreArchive();if(!items.some(p=>p.id===id))return;if(!confirm('Bu geri yükleme noktası kalıcı olarak silinsin mi?'))return;if(writeRestoreArchive(items.filter(p=>p.id!==id)))renderRestorePoints();else alert('Silme başarısız oldu.')}
